@@ -1,0 +1,19 @@
+# Errors that may happen (from experience). These are referenced by the main script
+#ANS1017E_Session rejected: TCP/IP connection failure
+#ANS1029E_Communication with the  TSM server is lost
+#ANS1030E_The operating system refused a TSM request for memory allocation.
+#ANS1071E_Invalid domain name entered
+#ANS1102E_An excessive number of command line arguments are passed o the program.
+#ANS1149E_No domain is available for incremental backup. The domain may be empty or all file systems in the domain are excluded.
+#ANS1228E_Sending of object(s) failed.
+#ANS1311E_The TSM-server is out of space
+#ANS1512E_Scheduled event failed.  Return code = 12.
+#ANS1802E_Incremental backup finished with failure(s)
+#ANS1999E_Incremental processing of stopped.
+#ANS4000E_File space does not exist.
+#ANS4005E_File not found
+#ANS4007E_Access to the object is denied
+#ANS4021E_File system not ready
+#ANS4037E_Object changed during processing. Object skipped
+#ANS4042E_Object name(s) contains one or more unrecognized characters
+#
