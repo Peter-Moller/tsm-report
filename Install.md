@@ -19,15 +19,15 @@ I use the same server for `SignalURL`, `PayloadURL` and `ReportBackTo`, but you 
 
 1. Download or clone this repository
 2. As a convenience: create a symlink to the script somewhere on `$PATH`, like `/usr/local/bin`
-* Create the directories `/TSM` and `/TSM/DailyReports` and make sure the user who is going to run `tsm-report.sh` can write in those directories. In the former directory, payload files are stored, and in the latter, local reports are created daily for the convenience of the user. Those files are kept for 30 days
-* Add the script (or the link) to `cron`, such as `*/10 * * * * /usr/local/bin/tsm-report.sh`. This is needed for the auto-update functionality
-* On Windows, the script will only run automatically if:
+3. Create the directories `/TSM` and `/TSM/DailyReports` and make sure the user who is going to run `tsm-report.sh` can write in those directories. In the former directory, payload files are stored, and in the latter, local reports are created daily for the convenience of the user. Those files are kept for 30 days
+4. Add the script (or the link) to `cron`, such as `*/10 * * * * /usr/local/bin/tsm-report.sh`. This is needed for the auto-update functionality
+5. On Windows, the script will only run automatically if:
    * WSL (Windows Subsystem for Linux) is running and
    * `cron` is running. I suggest to put `service start cron` in `.profile`
    * To make WSL start when you log in to Windows, you can take [this VBS-script](https://gist.github.com/leonelsr/cde77574519eb1fd672bc9690e01257e) and store it in `C:\Users\my-user-name\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`
-* If you want to be able to have log files sent “back home”, read the section ”In detail: Upload functionality” below
-* If you want to download extra files (“payload”), read the section ”In detail: Downloading extras” below
-* If you want to use “signals”, read the section ”In detail: Sending signals” below
+6. If you want to be able to have log files sent “back home”, read the section ”In detail: Upload functionality” below
+7. If you want to download extra files (“payload”), read the section ”In detail: Downloading extras” below
+8. If you want to use “signals”, read the section ”In detail: Sending signals” below
 
 
 **Optional settings:**
