@@ -231,9 +231,9 @@ function GetFile ()
 	local PathToFetch=$1
 	local FileToFetch=$2
 	local RemoteURL=$3
-	${CURL} -s -f "$ClientName" -o /tmp/"$FileToFetch" "$RemoteURL"/"$PathToFetch""$FileToFetch"
+	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch" "$RemoteURL"/"$PathToFetch""$FileToFetch"
 	local ERR1=$?
-	${CURL} -s -f "$ClientName" -o /tmp/"$FileToFetch".sha1 "$RemoteURL"/"$PathToFetch""$FileToFetch".sha1
+	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch".sha1 "$RemoteURL"/"$PathToFetch""$FileToFetch".sha1
 	local ERR2=$?
 	# If there were any errors, don't do anything further
   	if [ "$ERR1" -ne 0 -o "$ERR2" -ne 0 ]; then
@@ -256,7 +256,7 @@ function SendSignal ()
 {
 	local signal=$1
 	local RemoteURL=$2
-	${CURL} -s -f "$ClientName" -o /dev/null "$RemoteURL"/signals/"$signal" 2>/dev/null
+	${CURL} --silent --fail --referer "$ClientName" --output /dev/null "$RemoteURL"/signals/"$signal" 2>/dev/null
 }
 
 
@@ -270,7 +270,7 @@ function SendHome ()
 	# But only send home if the file has not already been sent today
 	if [ -n "$SignalURL" -a ! -f "/tmp/dsmsched_sent_home_${Today}_${ClientName}" ]; then
 		# Does a signal file exist at the server? If so, the log file needs to be sent home
-		if ${CURL} -s -f "$ClientName" "${SignalURL}/send_home/${ClientName}"; then
+		if ${CURL} --silent --fail --referer "$ClientName" "${SignalURL}/send_home/${ClientName}"; then
 			# Send the file back up, but don't wait more than 10 seconds
 			${SSH} -o ConnectTimeout=30 "${ReportBackUser}@${ReportBackTo}" "$(basename "$LogFile")_${ClientName}_${Today}.txt" &> /dev/null < "$LogFile"
 			# Did it work? If so, send a signal and create a signal file
