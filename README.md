@@ -6,7 +6,7 @@ It does this by digging through the log file that the backup process produces.
 
 ## Features
 
-###Basic features:
+### Basic features:
 * Multi-platform: **macOS**, **Linux** and **Windows 10** *(with “WSL” — “Windows Subsystem for Linux”)*
 * Generates a daily report specifying:
   *  number of files backed up
@@ -20,12 +20,13 @@ It does this by digging through the log file that the backup process produces.
 * A daily one line entry in a “diary file” specifying what happened
 * Automatically updates itself every 7 days (can be turned off)
 
-###Optional features:
+### Optional features:
 * Download auxilliary files, such as PDF-documentation, from a server to the local machine. This is done using `curl` wich checksum verification
 * Send the daily report back to a server in case the TSM operator needs to look at the details of the backup but cannot get to the client (done with `ssh`)
 * Send various “signals” to inform the TSM operator of various issues on the client. This is done using `curl` to a specified host and includes the TSM-client name.  
 
-###Checks perfomed at runtime:
+### Checks perfomed at runtime:
+* that the report script isn't already running
 * that the backup daemon (`dsmcad`) is running and warns if not (does **not** work on Windows!)
 * that the log file is readable
 * if the script is added to `cron` of the running user and warns if not (links will be resolved)
