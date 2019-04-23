@@ -43,10 +43,10 @@ It does this by digging through the log file that the backup process produces.
 ## Screen shots:
 
 **macOS:**  
-![tsm-report on macOS](tsm-report macOS.png)
+![tsm-report on macOS](tsm-report_macOS.png)
 
 **Linux:**  
-![tsm-report on Linux](tsm-report Linux.png)
+![tsm-report on Linux](tsm-report_Linux.png)
 
 **Windows 10:**  
-![tsm-report on Windows](tsm-report Windows.png)
+![tsm-report on Windows](tsm-report_Windows.png)
