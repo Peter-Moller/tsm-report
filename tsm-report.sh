@@ -165,18 +165,25 @@ AutoUpdate="t"
 # +------------------------------------------------------------------------+
 
 # Find where the script resides (so updates update the correct version) -- without trailing slash
-ScriptDirName="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ScriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+#echo "■■■ ScriptDir: \"$ScriptDir\""
 # What is the name of the script? (without any PATH)
 ScriptName="$(basename $0)"
+#echo "■■■ ScriptName: \"$ScriptName\""
+# When '$ScriptDir' is a link, we need to find the “real” directory; 'ScriptRealDir'.
+# This is ised for finding the errors and also for updating
+[ -L "${ScriptDir}/${ScriptName}" ] && ScriptRealDir="$(dirname "$(readlink "${ScriptDir}/${ScriptName}")")" || ScriptRealDir="$ScriptDir"
+#echo "■■■ ScriptRealDir: \"$ScriptRealDir\""
 # Is the file writable?
-if [ -w "${ScriptDirName}"/"${ScriptName}" ]; then
+if [ -w "${ScriptRealDir}"/"${ScriptName}" ]; then
   ScriptWritable="yes"
 else
   ScriptWritable="no"
 fi
+#echo "■■■ ScriptWritable: \"$ScriptWritable\""
 # Who owns the script?
-ScriptOwner="$(ls -ls ${ScriptDirName}/${ScriptName} | awk '{print $4":"$5}')"
-
+ScriptOwner="$(ls -ls ${ScriptRealDir}/${ScriptName} | awk '{print $4":"$5}')"
+#echo "■■■ ScriptOwner: \"$ScriptOwner\""
 # Is it run through 'cron'? If so, $PATH is VERY limited ('/usr/bin:/bin') and that is used to determine that
 [ $(echo $PATH | ${EGREP} -o ":" | wc -l) -lt 3 ] && Cron="t" || Cron=""
 
@@ -324,7 +331,7 @@ function GetPayload ()
 
 function SelfUpdate ()
 {
-	cd "$ScriptDirName"
+	cd "$ScriptRealDir"
 	# Get the metadata for the repo
 	git fetch --all &> /dev/null
 	if [ -n "$(git diff --name-only origin/master | grep "$ScriptName")" ]; then
@@ -429,7 +436,7 @@ fi
 [ "$Debug" = "t" ] && echo "$(date): start of script" >> "$DebugFile"
 
 # If the script is older than 7 days, update it and also get the latest payload
-if [ -n "$(${FIND} ${ScriptDirName}/${ScriptName} -type f -mtime +7d 2> /dev/null)" ]; then
+if [ -n "$(${FIND} ${ScriptRealDir}/${ScriptName} -type f -mtime +7d 2> /dev/null)" ]; then
 	# But only report if AutoUpdate = "t"
 	if [ "$AutoUpdate" = "t" ]; then
 		# Display warning if we are interactive
@@ -570,16 +577,16 @@ if [ -z "$Cron" ]; then
 	# Check that $ReportDir exists and is writable
 	[ -w "$ReportDir" ] || echo "Report directory (\"$ReportDir\") not writeable!"
 	# Check that the report script runs periodically
-	CronCommand="$(${CRONTAB} -l | ${EGREP} "${ScriptName}" | sed -e 's/^\([^ ]* \)\{5\}//')"  # CronCommand='/usr/local/bin/tsm-report.sh'
+	CronCommand="$(${CRONTAB} -l | ${EGREP} "${ScriptName}" | sed -e 's/^\([^ ]* \)\{5\}//')"  # CronCommand='/usr/local/bin/tsm-report.sh 2>/tmp/tsm-report_cron_std_err'
 	# Is the script correctly set up to work through 'cron'?
-	if [ ! "$CronCommand" = "${ScriptDirName}/${ScriptName}" -a ! "$(readlink "$CronCommand")" = "${ScriptDirName}/${ScriptName}" ]; then
-		printf "The script (\"${ScriptDirName}/${ScriptName}\") is not set up to run periodically through \"crontab\" — at least not as the current user.\nYou should see to this!\n\n"
+	if [ -z "$(echo "$CronCommand" | ${EGREP} -o "${ScriptDir}/${ScriptName}")" -a -z "$(echo "$CronCommand" | ${EGREP} -o "${ScriptRealDir}/${ScriptName}")" ]; then
+		printf "The script (\"${ScriptDir}/${ScriptName}\") is not set up to run periodically through \"crontab\" — at least not as the current user.\nYou should see to this!\n\n"
 	fi
 	# Is dsmcad not running? Warn if so. (Not on Windows since we cannot see the processes on Windows)
 	[ ! "$OS" = "Windows" -a -z "$(pgrep dsmcad)" ] && printf "${ESC}${RedBack};${YellowFont}m\"dsmcad\" is not running! Backup will not run and this is BAD...${Reset}\n\n"
 
 	# Print header for the report
-	printf "${ESC}${BlackBack};${WhiteFont}mBackup report for:${Reset}${ESC}${WhiteBack};${BlackFont}m $(uname -n) ${Reset}   ${ESC}${BlackBack};${WhiteFont}mTSM-server:${ESC}${WhiteBack};${BlackFont}m $TSM_Server ${Reset}   ${ESC}${BlackBack};${WhiteFont}mDate & time:${ESC}${WhiteBack};${BlackFont}m $(date +%F", "%R) ${Reset}\n"
+	printf "${ESC}${BlackBack};${WhiteFont}mBackup report for:${Reset}${ESC}${WhiteBack};${BlackFont}m $ClientName ${Reset}   ${ESC}${BlackBack};${WhiteFont}mTSM-server:${ESC}${WhiteBack};${BlackFont}m $TSM_Server ${Reset}   ${ESC}${BlackBack};${WhiteFont}mDate & time:${ESC}${WhiteBack};${BlackFont}m $(date +%F", "%R) ${Reset}\n"
 
 	# If there is a Critical Error, display it
 	if [ -n "$TSM_Critical_Error" ]; then
@@ -615,7 +622,7 @@ if [ -z "$Cron" ]; then
 	    #  15 ANS4007E'
 	    echo "$ErrorList" | while read -r Num Error
 	    do
-	    	TSMError="$(grep "^#${Error}_" "$TSMCommonError" | cut -d_ -f2)"
+	    	TSMError="$(grep "^#${Error}_" "${ScriptRealDir}/${TSMCommonError}" | cut -d_ -f2)"
 	    	printf "%4s%-9s%-30s\n" "$Num" " ${Error}" " $TSMError"
 	    done
 	    printf "${ESC}${ItalicFace}m%40s${Reset}\n" "Look at the error-log file ($ErrorFileName) for details!"
