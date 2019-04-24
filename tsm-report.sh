@@ -586,7 +586,7 @@ if [ -z "$Cron" ]; then
 	[ ! "$OS" = "Windows" -a -z "$(pgrep dsmcad)" ] && printf "${ESC}${RedBack};${YellowFont}m\"dsmcad\" is not running! Backup will not run and this is BAD...${Reset}\n\n"
 
 	# Print header for the report
-	printf "${ESC}${BlackBack};${WhiteFont}mBackup report for:${Reset}${ESC}${WhiteBack};${BlackFont}m $ClientName ${Reset}   ${ESC}${BlackBack};${WhiteFont}mTSM-server:${ESC}${WhiteBack};${BlackFont}m $TSM_Server ${Reset}   ${ESC}${BlackBack};${WhiteFont}mDate & time:${ESC}${WhiteBack};${BlackFont}m $(date +%F", "%R) ${Reset}\n"
+	printf "${ESC}${BlackBack};${WhiteFont}mTSM backup report for client:${Reset}${ESC}${WhiteBack};${BlackFont}m $ClientName ${Reset}   ${ESC}${BlackBack};${WhiteFont}mServer:${ESC}${WhiteBack};${BlackFont}m $TSM_Server ${Reset}   ${ESC}${BlackBack};${WhiteFont}mDate & time:${ESC}${WhiteBack};${BlackFont}m $(date +%F", "%R) ${Reset}\n"
 
 	# If there is a Critical Error, display it
 	if [ -n "$TSM_Critical_Error" ]; then
