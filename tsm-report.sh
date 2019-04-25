@@ -230,18 +230,18 @@ FontColor="$RES"
 
 # Get a file from $RemoteURL (& file.sha1) to /tmp and verifie it's checksum
 # Assumes:
-#   $1=path for file to fetch, **INCLUDING** a trailing slash
+#   $1=URL for file to fetch file from
 #   $2=filename to fetch
 # Returns:
 #   ERR=0, all is OK, otherwise something wen't wrong
 function GetFile ()
 {
-	local PathToFetch=$1
+	local RemoteURL=$1
 	local FileToFetch=$2
-	local RemoteURL=$3
-	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch" "$RemoteURL"/"$PathToFetch""$FileToFetch"
+
+	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch" "${RemoteURL}/${FileToFetch}"
 	local ERR1=$?
-	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch".sha1 "$RemoteURL"/"$PathToFetch""$FileToFetch".sha1
+	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch".sha1 "${RemoteURL}/${FileToFetch}".sha1
 	local ERR2=$?
 	# If there were any errors, don't do anything further
   	if [ "$ERR1" -ne 0 -o "$ERR2" -ne 0 ]; then
@@ -254,6 +254,40 @@ function GetFile ()
     	 	ERR=1
 	    fi
   	fi
+}
+
+
+# Get auxilliary payload
+# These files will be placed in '$ReportDir' on the client
+# Exit the script if the payload could not be fetched
+function GetPayload ()
+{
+	# Get the payload manifest-file
+	GetFile  "${PayloadURL}/payload" "payload.txt"
+	# Exit if it failed
+	if [ "$ERR" -ne 0 ]; then
+		echo "$(date): payload could not be fetched or the checksum was incorrect. Exiting script" >> "$DiaryFile"
+		exit 1
+	fi
+
+	# Read the manifest and fetch the files one by one
+	exec 5</tmp/payload.txt
+	while read -u 5 FILE
+	do
+		# Get the file
+		GetFile "${PayloadURL}/payload" "$FILE"
+		if [ "$ERR" -eq 0 ]; then
+			# Only move the file to '$ReportDir' if it differs from one that is already there
+			# Note that the diff will be empty if the second file doens't exist *unless* one redirect std err 2 std out!
+			# Rename the file so that "_" is replaced by space
+			# Also, make a note in the diary
+			if [ -n "$(diff /tmp/$FILE "${PayloadDir}/${FILE//_/ }" 2>&1)" ]; then
+				chmod 644 /tmp/"$FILE"
+				mv /tmp/"$FILE" "${PayloadDir}"/"${FILE//_/ }"
+				echo "$(date): the file \"${FILE//_/ }\" was fetched and moved into the \"${PayloadDir}\"-directory" >> "$DiaryFile"
+			fi
+		fi
+	done
 }
 
 
@@ -293,40 +327,6 @@ function SendHome ()
 	fi
 
 	[ "$Debug" = "t" ] && echo "$(date): inside function SendHome, after sending dsmsched home" >> "$DebugFile"
-}
-
-
-# Get auxilliary payload
-# These files will be placed in '$ReportDir' on the client
-# Exit the script if the payload could not be fetched
-function GetPayload ()
-{
-	# Get the payload manifest-file
-	GetFile "payload/" "payload.txt" "$PayloadURL"
-	# Exit if it failed
-	if [ "$ERR" -ne 0 ]; then
-		echo "$(date): payload could not be fetched or the checksum was incorrect. Exiting script" >> "$DiaryFile"
-		exit 1
-	fi
-
-	# Read the manifest and fetch the files one by one
-	exec 5</tmp/payload.txt
-	while read -u 5 FILE
-	do
-		# Get the file
-		GetFile "payload/" "$FILE" "$PayloadURL"
-		if [ "$ERR" -eq 0 ]; then
-			# Only move the file to '$ReportDir' if it differs from one that is already there
-			# Note that the diff will be empty if the second file doens't exist *unless* one redirect std err 2 std out!
-			# Rename the file so that "_" is replaced by space
-			# Also, make a note in the diary
-			if [ -n "$(diff /tmp/$FILE "${PayloadDir}/${FILE//_/ }" 2>&1)" ]; then
-				chmod 644 /tmp/"$FILE"
-				mv /tmp/"$FILE" "${PayloadDir}"/"${FILE//_/ }"
-				echo "$(date): the file \"${FILE//_/ }\" was fetched and moved into the \"${PayloadDir}\"-directory" >> "$DiaryFile"
-			fi
-		fi
-	done
 }
 
 
