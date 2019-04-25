@@ -167,24 +167,19 @@ AutoUpdate="t"
 
 # Find where the script resides (so updates update the correct version) -- without trailing slash
 ScriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-#echo "■■■ ScriptDir: \"$ScriptDir\""
 # What is the name of the script? (without any PATH)
 ScriptName="$(basename $0)"
-#echo "■■■ ScriptName: \"$ScriptName\""
 # When '$ScriptDir' is a link, we need to find the “real” directory; 'ScriptRealDir'.
 # This is ised for finding the errors and also for updating
 [ -L "${ScriptDir}/${ScriptName}" ] && ScriptRealDir="$(dirname "$(readlink "${ScriptDir}/${ScriptName}")")" || ScriptRealDir="$ScriptDir"
-#echo "■■■ ScriptRealDir: \"$ScriptRealDir\""
 # Is the file writable?
 if [ -w "${ScriptRealDir}"/"${ScriptName}" ]; then
   ScriptWritable="yes"
 else
   ScriptWritable="no"
 fi
-#echo "■■■ ScriptWritable: \"$ScriptWritable\""
 # Who owns the script?
 ScriptOwner="$(ls -ls ${ScriptRealDir}/${ScriptName} | awk '{print $4":"$5}')"
-#echo "■■■ ScriptOwner: \"$ScriptOwner\""
 # Is it run through 'cron'? If so, $PATH is VERY limited ('/usr/bin:/bin') and that is used to determine that
 [ $(echo $PATH | ${EGREP} -o ":" | wc -l) -lt 3 ] && Cron="t" || Cron=""
 
@@ -239,6 +234,8 @@ function GetFile ()
 	local RemoteURL=$1
 	local FileToFetch=$2
 
+	# Exit if we don't have a curl on the system
+	[ ! -x $CURL ] && return
 	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch" "${RemoteURL}/${FileToFetch}"
 	local ERR1=$?
 	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch".sha1 "${RemoteURL}/${FileToFetch}".sha1
@@ -299,6 +296,8 @@ function SendSignal ()
 {
 	local signal=$1
 	local RemoteURL=$2
+	# Exit if we don't have a curl on the system
+	[ ! -x $CURL ] && return
 	[ -n "$SignalURL" ] && ${CURL} --silent --fail --referer "$ClientName" --output /dev/null "$RemoteURL"/signals/"$signal" 2>/dev/null
 }
 
@@ -308,6 +307,9 @@ function SendSignal ()
 function SendHome ()
 {
 	[ "$Debug" = "t" ] && echo "$(date): inside function SendHome, before sending dsmsched home" >> "$DebugFile"
+
+	# Exit if we don't have a curl on the system
+	[ ! -x $CURL ] && return
 
 	# Does a SignalURL exist? (If not, there's no need to try to send home)
 	# But only send home if the file has not already been sent today
