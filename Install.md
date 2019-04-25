@@ -84,12 +84,13 @@ The following is a list of the steps involved:
    This script will take `stdin` from `ssh` and store it in a location. It can be as simple as this:  
    `#!/bin/bash`  
    `temp="$@"`  
+   `# Deal with $@ starting with "-c ":`  
    `FileName="${temp/-c /}"`  
    `if [ "$FileName" = "sshkey" ]; then`  
    `  cat - >> .ssh/authorized_keys`  
    `  echo "Added to .ssh/authorized_keys"`  
    `else`  
-   `  cat - > "${FileName/-c /}"`  
+   `  cat - > "$FileName"`  
    `fi`  
    `exit 0`  
    This simple script will add the file you give it to `.ssh/authorized_keys` if the name you give it is “sshkey” (example: `ssh user@reportbackto.pretendco.com sshkey <.ssh/id_rsa.pub`). You might, however, make it as elaborate as you like, for instance storing of files in different places depending on names, dates etc. You can use the environment variables declared in `authorized_keys` for that
