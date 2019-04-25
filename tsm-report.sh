@@ -227,13 +227,13 @@ FontColor="$RES"
 ###                           F U N C T I O N S                                 ###
 ###################################################################################
 
-function GetFile ()
 # Get a file from $RemoteURL (& file.sha1) to /tmp and verifie it's checksum
 # Assumes:
 #   $1=path for file to fetch, **INCLUDING** a trailing slash
 #   $2=filename to fetch
 # Returns:
 #   ERR=0, all is OK, otherwise something wen't wrong
+function GetFile ()
 {
 	local PathToFetch=$1
 	local FileToFetch=$2
@@ -256,10 +256,10 @@ function GetFile ()
 }
 
 
-function SendSignal ()
 # Send a signal to the apache log file on $RemoteURL
 # Assumes:
 #   $1=file to "get" with curl
+function SendSignal ()
 {
 	local signal=$1
 	local RemoteURL=$2
@@ -267,9 +267,9 @@ function SendSignal ()
 }
 
 
-function SendHome ()
 # if ${SignalURL}/send_home/${ClientName} exists, then send $LogFile home 
 # Will only try once per day!
+function SendHome ()
 {
 	[ "$Debug" = "t" ] && echo "$(date): inside function SendHome, before sending dsmsched home" >> "$DebugFile"
 
@@ -295,10 +295,10 @@ function SendHome ()
 }
 
 
-function GetPayload ()
 # Get auxilliary payload
-# These files will be placed in "/CS" on the client
+# These files will be placed in '$ReportDir' on the client
 # Exit the script if the payload could not be fetched
+function GetPayload ()
 {
 	# Get the payload manifest-file
 	GetFile "payload/" "payload.txt" "$PayloadURL"
@@ -315,7 +315,7 @@ function GetPayload ()
 		# Get the file
 		GetFile "payload/" "$FILE" "$PayloadURL"
 		if [ "$ERR" -eq 0 ]; then
-			# Only move the file to /CS if it differs from one that is already there
+			# Only move the file to '$ReportDir' if it differs from one that is already there
 			# Note that the diff will be empty if the second file doens't exist *unless* one redirect std err 2 std out!
 			# Rename the file so that "_" is replaced by space
 			# Also, make a note in the diary
@@ -329,6 +329,7 @@ function GetPayload ()
 }
 
 
+# Update the script
 function SelfUpdate ()
 {
 	cd "$ScriptRealDir"
@@ -344,6 +345,85 @@ function SelfUpdate ()
 		exit 0
 #	else
 #		echo "Already the latest version."
+	fi
+}
+
+
+# Get the data from the last run
+# Expects the date as parameter
+# Returns:
+# - BackupDate       Date when it concluded
+# - BackupTime       Time when it concluded
+# - BackupFailures   Number of failed failiures
+# - BackupNrFiles    Number of files backed up
+# - BackupNrVolume   The number of MB transferred
+# - BackupTime       How long it took
+# - BackupServer     Which server we are backing against
+# We will also look for serious issues and if we find them, create '$TSM_Warning' with pertinent content
+function GetBackupResult ()
+{
+	local Day=$1
+	
+	# Grab the relevant lines between 'SCHEDULEREC STATUS BEGIN' and 'Scheduled event':
+	BackupData="$(${EGREP} "^$Day" "$LogFile" | awk '/SCHEDULEREC STATUS BEGIN/{a=1}/ Session established with server /{print;a=0}a')"
+	# This gives:
+	# 2019-03-26 02:53:59 Session established with server TSM3: Linux/x86_64
+	# 2019-03-26 03:07:11 --- SCHEDULEREC STATUS BEGIN
+	# 2019-03-26 03:07:11 Total number of objects inspected:    3,220,562
+	# 2019-03-26 03:07:11 Total number of objects backed up:          418        <--- Interesting!
+	# 2019-03-26 03:07:11 Total number of objects updated:            208
+	# 2019-03-26 03:07:11 Total number of objects rebound:              0
+	# 2019-03-26 03:07:11 Total number of objects deleted:              0
+	# 2019-03-26 03:07:11 Total number of objects expired:            296
+	# 2019-03-26 03:07:11 Total number of objects failed:               2        <---  Interesting!
+	# 2019-03-26 03:07:11 Total number of objects encrypted:            0
+	# 2019-03-26 03:07:11 Total number of objects grew:                 0
+	# 2019-03-26 03:07:11 Total number of retries:                      1
+	# 2019-03-26 03:07:11 Total number of bytes inspected:           4.51 TB
+	# 2019-03-26 03:07:11 Total number of bytes transferred:       155.34 MB     <--- Interesting!
+	# 2019-03-26 03:07:11 Data transfer time:                        1.08 sec
+	# 2019-03-26 03:07:11 Network data transfer rate:          147,046.32 KB/sec
+	# 2019-03-26 03:07:11 Aggregate data transfer rate:            200.83 KB/sec
+	# 2019-03-26 03:07:11 Objects compressed by:                        0%
+	# 2019-03-26 03:07:11 Total data reduction ratio:              100.00%
+	# 2019-03-26 03:07:11 Elapsed processing time:               00:13:12        <--- Interesting!
+	# 2019-03-26 03:07:11 --- SCHEDULEREC STATUS END
+	# 2019-03-26 03:07:11 --- SCHEDULEREC OBJECT END DAILY_MACSERVERS 2019-03-26 02:00:00
+	# 2019-03-26 03:07:11 Scheduled event 'DAILY_MACSERVERS' completed successfully.
+	# 2019-03-26 03:07:11 Sending results for scheduled event 'DAILY_MACSERVERS'.
+	# 2019-03-26 03:07:11 Results sent to server for scheduled event 'DAILY_MACSERVERS'.
+	# 2019-03-26 03:07:11 ANS1483I Schedule log pruning started.
+	# 2019-03-26 03:07:11 ANS1484I Schedule log pruning finished successfully.
+	# 2019-03-26 03:07:11 TSM Backup-Archive Client Version 7, Release 1, Level 2.0  
+	# 2019-03-26 03:07:11 Querying server for next scheduled event.
+	# 2019-03-26 03:07:11 Node Name: LAGRING2
+	# 2019-03-26 03:07:11 Session established with server TSM3: Linux/x86_64     <--- Interesting!
+	
+	# Note: somtimes we get the infamous 'Return code = 12':
+	# 2019-03-20 02:29:05 ANS1512E Scheduled event 'DAILY_MACSERVERS' failed.  Return code = 12.
+
+	# Get the number of different objects:
+	BackupDate="$(echo "$BackupData" | ${GREP} ' --- SCHEDULEREC STATUS END' | ${AWK} '{ print $1 }')"   # Gives: BackupDate=2013-12-03
+	BackupTime="$(echo "$BackupData" | ${GREP} ' --- SCHEDULEREC STATUS END' | ${AWK} '{ print $2 }')"   # BackupTime=09:02:29
+	BackupFailures="$(echo "$BackupData" | ${EGREP} 'Total number of objects failed' | ${AWK} '{ print $NF }')"
+	BackupNrFiles="$(echo "$BackupData" | ${GREP} 'Total number of objects backed up' | ${AWK} '{ print $NF }')"
+	BackupNrVolume="$(echo "$BackupData" | ${GREP} 'Total number of bytes transferred' | ${AWK} '{ print $8" "$9 }')"
+	BackupTime="$(echo "$BackupData" | ${GREP} 'Elapsed processing time' | ${AWK} '{ print $6 }')"
+	# What TSM-server are we running against?
+	BackupServer="$(echo "$BackupData" | ${GREP} "Session established with server" | ${AWK} '{print $7}' | cut -d: -f1 | head -1)"
+
+	# Look for >5 of the infamous ANS1029E/ANS1017E messages and create warning message accordingly
+	# However, ignore error messages during the night (when there is no scheduler) from houres 01, 02, 03, 04, 05, 06.
+	# TSM_Warning≠"" constitutes a REAL failure that should be alerted!
+	if [ "$(${GREP} "$Day" "$LogFile" 2>/dev/null | ${EGREP} 'ANS1029E Communication with the  TSM server is lost' | ${GREP} -v " 0[123456]:" | wc -l | ${AWK} '{ print $1 }')" -gt 5 ]; then
+		TSM_Warning="W A R N I N G:  Communication with the TSM-server \"$BackupServer\" cannot be established. Contact the system administrator\!\!\!\!\!\!\!"
+	fi
+	if [ "$(${GREP} "$Day" "$LogFile" 2>/dev/null | ${EGREP} 'ANS1017E Session rejected: TCP/IP connection failure' | ${GREP} -v " 0[123456]:" | wc -l | ${AWK} '{ print $1 }')" -gt 5 ]; then
+		TSM_Warning="W A R N I N G:  The TSM-server \"$BackupServer\" cannot be contacted (may be down?). Contact the system administrator\!\!\!\!\!\!\!"
+	fi
+	# Also, look for ANS1311E (Server out of data storage space)
+	if [ "$(${GREP} "$Day" "$LogFile" 2>/dev/null | ${EGREP} 'ANS1311E')" ]; then
+		TSM_Warning="W A R N I N G:  The TSM-server \"$BackupServer\" is out of space! Contact the system administrator\!\!\!\!\!\!\!"
 	fi
 }
 
@@ -450,97 +530,26 @@ fi
 # See if we should send the log file home
 SendHome
 
-# Grab the relevant lines between 'SCHEDULEREC STATUS BEGIN' and 'Scheduled event':
-TodaysResult="$(${EGREP} "^$Today" "$LogFile" | awk '/SCHEDULEREC STATUS BEGIN/{a=1}/ Session established with server /{print;a=0}a')"
-# This gives:
-# 2019-03-26 02:53:59 Session established with server TSM3: Linux/x86_64
-# 2019-03-26 03:07:11 --- SCHEDULEREC STATUS BEGIN
-# 2019-03-26 03:07:11 Total number of objects inspected:    3,220,562
-# 2019-03-26 03:07:11 Total number of objects backed up:          418     <--- Interesting!
-# 2019-03-26 03:07:11 Total number of objects updated:            208
-# 2019-03-26 03:07:11 Total number of objects rebound:              0
-# 2019-03-26 03:07:11 Total number of objects deleted:              0
-# 2019-03-26 03:07:11 Total number of objects expired:            296
-# 2019-03-26 03:07:11 Total number of objects failed:               2     <---  Interesting!
-# 2019-03-26 03:07:11 Total number of objects encrypted:            0
-# 2019-03-26 03:07:11 Total number of objects grew:                 0
-# 2019-03-26 03:07:11 Total number of retries:                      1
-# 2019-03-26 03:07:11 Total number of bytes inspected:           4.51 TB
-# 2019-03-26 03:07:11 Total number of bytes transferred:       155.34 MB  <--- Interesting!
-# 2019-03-26 03:07:11 Data transfer time:                        1.08 sec
-# 2019-03-26 03:07:11 Network data transfer rate:          147,046.32 KB/sec
-# 2019-03-26 03:07:11 Aggregate data transfer rate:            200.83 KB/sec
-# 2019-03-26 03:07:11 Objects compressed by:                        0%
-# 2019-03-26 03:07:11 Total data reduction ratio:              100.00%
-# 2019-03-26 03:07:11 Elapsed processing time:               00:13:12     <--- Interesting!
-# 2019-03-26 03:07:11 --- SCHEDULEREC STATUS END
-# 2019-03-26 03:07:11 --- SCHEDULEREC OBJECT END DAILY_MACSERVERS 2019-03-26 02:00:00
-# 2019-03-26 03:07:11 Scheduled event 'DAILY_MACSERVERS' completed successfully.
-# 2019-03-26 03:07:11 Sending results for scheduled event 'DAILY_MACSERVERS'.
-# 2019-03-26 03:07:11 Results sent to server for scheduled event 'DAILY_MACSERVERS'.
-# 2019-03-26 03:07:11 ANS1483I Schedule log pruning started.
-# 2019-03-26 03:07:11 ANS1484I Schedule log pruning finished successfully.
-# 2019-03-26 03:07:11 TSM Backup-Archive Client Version 7, Release 1, Level 2.0  
-# 2019-03-26 03:07:11 Querying server for next scheduled event.
-# 2019-03-26 03:07:11 Node Name: LAGRING2
-# 2019-03-26 03:07:11 Session established with server TSM3: Linux/x86_64
+# Get the last result from the log file:
+LastResult="$(${EGREP} " Scheduled event " $LogFile | ${TAIL} -1)"
+# May be:
+#  2019-04-24 09:31:03 Scheduled event 'DAILY_01' completed successfully.
+#  2019-04-23 09:29:19 ANS1512E Scheduled event 'DAILY_01_W' failed.  Return code = 12.
 
-# Note: somtimes we get the infamous 'Return code = 12':
-# 2019-03-20 02:29:05 ANS1512E Scheduled event 'DAILY_MACSERVERS' failed.  Return code = 12.
-
-# What TSM-server are we running against?
-TSM_Server="$(echo "$TodaysResult" | ${GREP} "Session established with server" | awk '{print $7}' | cut -d: -f1 | head -1)"
-
-# Has the backup run today and concluded?
-if [ -n "$(echo "$TodaysResult" | grep " Scheduled event ")" ]; then
-	# Yes: dig out the data
-	[ "$Debug" = "t" ] && echo "$(date): successful backup today: digging out the data from the log file" >> "$DebugFile"
-
-	success="$(echo "$TodaysResult" | ${GREP} ' --- SCHEDULEREC STATUS END')"
-	# success='2013-12-03 09:02:29 --- SCHEDULEREC STATUS END'
-	# Get data for the latest backup
-	success_date="$(echo $success | ${AWK} '{ print $1 }')"
-	# Gives: success_date=2013-12-03
-	success_time="$(echo $success | ${AWK} '{ print $2 }')"
-	# success_time=09:02:29
-	
-	# Get the number of different objects:
-	failures="$(echo "$TodaysResult" | ${EGREP} 'Total number of objects failed' | ${AWK} '{ print $8" "$9" "$10 }' | sed 's/\ *$//g')"
-	BackedUpFiles="$(echo "$TodaysResult" | ${GREP} 'Total number of objects backed up' | ${AWK} '{ print $9" "$10" "$11 }' | sed 's/\ *$//g')"
-	BackedUpVolume="$(echo "$TodaysResult" | ${GREP} 'Total number of bytes transferred' | ${AWK} '{ print $8" "$9 }')"
-	BackedUpTime="$(echo "$TodaysResult" | ${GREP} 'Elapsed processing time' | ${AWK} '{ print $6 }')"
+# Get the date:
+LastDay="$(echo "$LastResult" | ${AWK} '{print $1}')"   # LastDay='2019-04-24'
+# Success or not?
+if [ -n "$(echo "$LastResult" | ${EGREP} -o "completed successfully")" ]; then
+	BackupResult="completed successfully"
 else
-	[ "$Debug" = "t" ] && echo "$(date): successful backup today: digging out the data from the log file" >> "$DebugFile"
-
-	LastResult="$(${GREP} -B 22 'completed successfully.$' $LogFile | ${TAIL} -22)"
-	success_date="$(echo "$LastResult" | ${GREP} 'completed successfully.$' | ${TAIL} -1 | ${AWK} '{ print $1 }')"
-	# Gives: success_date=2013-12-04
-	success_time="$(echo "$LastResult" | ${GREP} 'completed successfully.$' | ${TAIL} -1 | ${AWK} '{ print $2 }')"
-	# success_time=09:02:29
-
-	# Get the number of different objects:
-	failures="$(echo "$LastResult" | ${EGREP} 'Total number of objects failed' | ${AWK} '{ print $8" "$9" "$10 }' | sed 's/\ *$//g')"
-	BackedUpFiles="$(echo "$LastResult" | ${GREP} 'Total number of objects backed up' | ${AWK} '{ print $9" "$10" "$11 }' | sed 's/\ *$//g')"
-	BackedUpVolume="$(echo "$LastResult" | ${GREP} 'Total number of bytes transferred' | ${AWK} '{ print $8" "$9 }')"
-	BackedUpTime="$(echo "$LastResult" | ${GREP} 'Elapsed processing time' | ${AWK} '{ print $6 }')"
-
-	#Set warning flag
-	Warning="t"
-
-	# Look for >5 of the infamous ANS1029E/ANS1017E messages and create warning message accordingly
-	# However, ignore error messages during the night (when there is no scheduler) from houres 01, 02, 03, 04, 05, 06.
-	# TSM_Warning≠"" constitutes a REAL failure that should be alerted!
-	if [ "$(${GREP} "$Today" "$LogFile" 2>/dev/null | ${EGREP} 'ANS1029E Communication with the  TSM server is lost' | ${GREP} -v " 0[123456]:" | wc -l | ${AWK} '{ print $1 }')" -gt 5 ]; then
-		TSM_Warning="W A R N I N G:  Communication with the TSM-server \"$TSM_Server\" cannot be established. Contact the system administrator\!\!\!\!\!\!\!"
-	fi
-	if [ "$(${GREP} "$Today" "$LogFile" 2>/dev/null | ${EGREP} 'ANS1017E Session rejected: TCP/IP connection failure' | ${GREP} -v " 0[123456]:" | wc -l | ${AWK} '{ print $1 }')" -gt 5 ]; then
-		TSM_Warning="W A R N I N G:  The TSM-server \"$TSM_Server\" cannot be contacted (may be down?). Contact the system administrator\!\!\!\!\!\!\!"
-	fi
-	# Also, look for ANS1311E (Server out of data storage space)
-	if [ "$(${GREP} "$Today" "$LogFile" 2>/dev/null | ${EGREP} 'ANS1311E')" ]; then
-		TSM_Warning="W A R N I N G:  The TSM-server \"$TSM_Server\" is out of space! Contact the system administrator\!\!\!\!\!\!\!"
-	fi
+	BackupResult="$(echo "$LastResult" | ${EGREP} -o "failed.*")"
 fi
+# If the last successful backup was NOT today, set warning flag:
+[ "$LastDay" = "$Today" ] || Warning="t"
+
+# Get the backup data
+GetBackupResult "$LastDay"
+
 
 [ "$Debug" = "t" ] && echo "$(date): after digging out data in the log file" >> "$DebugFile"
 
@@ -554,16 +563,16 @@ fi
 
 # Create the message
 if [ "$Warning" = "t" ]; then
-	BackupMessage="${TSM_BANNER}W_A_R_N_I_N_G: last successful TSM-backup with \"$TSM_Server\" was $success_date. $TSM_Warning"
+	BackupMessage="${TSM_BANNER}W_A_R_N_I_N_G: last successful TSM-backup with \"$BackupServer\" was $BackupDate. $TSM_Warning"
 elif [ "$short" = "t" ] ; then
 	BackupMessage="${TSM_BANNER}Backup Successful" ;
 elif [ "$short" = "f" ]; then 
-	BackupMessage="${TSM_BANNER}$BackedUpFiles files backed up by server \"$TSM_Server\". $BackedUpVolume was transferred in $BackedUpTime"
+	BackupMessage="${TSM_BANNER}$BackedUpFiles files backed up by server \"$BackupServer\". $BackedUpVolume was transferred in $BackedUpTime"
 fi
 
 # Add warning, if any
-if [ ! "$failures" = "0" ]; then
-	BackupMessage="$BackupMessage. However, $failures object(s) failed. Check the loggfile ($LogFile)"
+if [ ! "$BackupFailures" = "0" ]; then
+	BackupMessage="$BackupMessage. However, $BackupFailures object(s) failed. Check the loggfile ($LogFile)"
 fi
 
 ### +--------------------------------------------------------+
@@ -586,36 +595,37 @@ if [ -z "$Cron" ]; then
 	[ ! "$OS" = "Windows" -a -z "$(pgrep dsmcad)" ] && printf "${ESC}${RedBack};${YellowFont}m\"dsmcad\" is not running! Backup will not run and this is BAD...${Reset}\n\n"
 
 	# Print header for the report
-	printf "${ESC}${BlackBack};${WhiteFont}mTSM backup report for client:${Reset}${ESC}${WhiteBack};${BlackFont}m $ClientName ${Reset}   ${ESC}${BlackBack};${WhiteFont}mServer:${ESC}${WhiteBack};${BlackFont}m $TSM_Server ${Reset}   ${ESC}${BlackBack};${WhiteFont}mDate & time:${ESC}${WhiteBack};${BlackFont}m $(date +%F", "%R) ${Reset}\n"
+	printf "${ESC}${BlackBack};${WhiteFont}mTSM backup report for client:${Reset}${ESC}${WhiteBack};${BlackFont}m $ClientName ${Reset}   ${ESC}${BlackBack};${WhiteFont}mServer:${ESC}${WhiteBack};${BlackFont}m $BackupServer ${Reset}   ${ESC}${BlackBack};${WhiteFont}mDate & time:${ESC}${WhiteBack};${BlackFont}m $(date +%F", "%R) ${Reset}\n"
 
 	# If there is a Critical Error, display it
 	if [ -n "$TSM_Critical_Error" ]; then
 		printf "${ESC}${RedFont}mCRITICAL ERROR: $TSM_Critical_Error${Reset}\n"
 	fi
 	if [ "$Warning" = "t" ]; then
-		echo "W A R N I N G:  last successful TSM-backup was $success_date at $success_time"
+		printf "${ESC}${RedFont}mW A R N I N G:  last successful TSM-backup was $BackupDate at $BackupTime${Reset}\n"
 		echo "$TSM_Warning"
 	else
-		echo "Date of last backup: ${success_date/$Today/today} at $success_time"
+		echo "Date of last backup: ${BackupDate/$Today/today} at $BackupTime"
 	fi
 
 	# Did the backup succeed?
-	if [ -n "$(echo "$TodaysResult" | ${EGREP} "Scheduled event.* completed successfully")" ]; then
-		printf "${ESC}${GreenFont}mStatus: Backup completed successfully${Reset}\n"
+	if [ "$BackupResult" = "completed successfully" ]; then
+		# Print with green text only if backup has run today
+		[ -z "${BackupDate/$Today/}" ] && printf "${ESC}${GreenFont}mStatus: Backup ${BackupResult}${Reset}\n" || echo "Status: Backup ${BackupResult}"
 	else
-		printf "${ESC}${RedFont}mStatus: Backup did NOT complete successfully. $(echo "$TodaysResult" | grep " Scheduled event " | cut -d. -f2 | sed 's/^\ *//g')${Reset}\n"
+		printf "${ESC}${RedFont}mStatus: Backup ${BackupResult}${Reset}\n"
 	fi
-	echo "Files backed up: $BackedUpFiles"
-	echo "Volume transferred: $BackedUpVolume"
-	echo "Time it took to back up: $BackedUpTime"
-	if [ ! "$failures" = "0" ]; then
+	echo "Files backed up: $BackupNrFiles"
+	echo "Volume transferred: $BackupNrVolume"
+	echo "Time it took to back up: $BackupTime"
+	if [ ! "$BackupFailures" = "0" ]; then
 		#Get the number of errors
-		ANSE="$(${EGREP} "$Today" "$LogFile" | ${EGREP} -o "ANS[0-9]{4}E" | ${EGREP} -v "ANS1512E" | wc -l)"
+		ANSE="$(${EGREP} "$BackupDate" "$LogFile" | ${EGREP} -o "ANS[0-9]{4}E" | ${EGREP} -v "ANS1512E" | wc -l)"
 		echo
 		echo "The following ${ANSE// /} errors were encountered:"
 		printf "${ESC}${BoldFace}m%4s%-9s%-30s${Reset}\n" "#" " Error" " Explanation"
 		# Get the list of errors:
-		ErrorList="$(${EGREP} "$Today" "$LogFile" | ${EGREP} -o "ANS[0-9]{4}E" | ${EGREP} -v "ANS1512E" | sort | uniq -c)"
+		ErrorList="$(${EGREP} "$BackupDate" "$LogFile" | ${EGREP} -o "ANS[0-9]{4}E" | ${EGREP} -v "ANS1512E" | sort | uniq -c)"
 		# Ex: ErrorList='  20 ANS1228E
 	    #   1 ANS1802E
 	    #   2 ANS4005E
@@ -625,7 +635,7 @@ if [ -z "$Cron" ]; then
 	    	TSMError="$(grep "^#${Error}_" "${ScriptRealDir}/${TSMCommonError}" | cut -d_ -f2)"
 	    	printf "%4s%-9s%-30s\n" "$Num" " ${Error}" " $TSMError"
 	    done
-	    printf "${ESC}${ItalicFace}m%40s${Reset}\n" "Look at the error-log file ($ErrorFileName) for details!"
+	    printf "${ESC}${ItalicFace}m%40s${Reset}\n" "Look at the error-log file (${ErrorFileName/$Today/$BackupDate}) for details!"
 	else
 		echo "No errors were encountered."
 	fi
