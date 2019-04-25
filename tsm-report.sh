@@ -526,6 +526,7 @@ if [ -n "$(${FIND} ${ScriptRealDir}/${ScriptName} -type f -mtime +7d 2> /dev/nul
 		# If there is a payload, get it
 		[ -n "$PayloadURL" ] && GetPayload
 		SelfUpdate
+		exit 0
 	fi
 fi
 
