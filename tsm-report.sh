@@ -49,7 +49,7 @@
 function help ()
 {
 	echo
-	echo "Usage: $0 [-d]"
+	echo "Usage: $0 [-du]"
 	echo "-d: debug. Only for the development of the script (debugs into \"/tmp/tsm-report_debug\")"
 	echo
 	exit 0
@@ -62,9 +62,10 @@ short=f
 #===============================================================
 # Read options
 
-while getopts ":d" opt; do
+while getopts ":du" opt; do
 	case $opt in
 		d ) Debug="t";;
+		u ) Update="t";;
 		\?|H ) help;;
 	esac
 done
@@ -516,7 +517,7 @@ fi
 [ "$Debug" = "t" ] && echo "$(date): start of script" >> "$DebugFile"
 
 # If the script is older than 7 days, update it and also get the latest payload
-if [ -n "$(${FIND} ${ScriptRealDir}/${ScriptName} -type f -mtime +7d 2> /dev/null)" ]; then
+if [ -n "$(${FIND} ${ScriptRealDir}/${ScriptName} -type f -mtime +7d 2> /dev/null)" -o "$Update" = "t" ]; then
 	# But only report if AutoUpdate = "t"
 	if [ "$AutoUpdate" = "t" ]; then
 		# Display warning if we are interactive
