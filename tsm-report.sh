@@ -357,7 +357,7 @@ function SelfUpdate ()
 # - BackupFailures   Number of failed failiures
 # - BackupNrFiles    Number of files backed up
 # - BackupNrVolume   The number of MB transferred
-# - BackupTime       How long it took
+# - BackupDuration   How long it took
 # - BackupServer     Which server we are backing against
 # We will also look for serious issues and if we find them, create '$TSM_Warning' with pertinent content
 function GetBackupResult ()
@@ -408,7 +408,7 @@ function GetBackupResult ()
 	BackupFailures="$(echo "$BackupData" | ${EGREP} 'Total number of objects failed' | ${AWK} '{ print $NF }')"
 	BackupNrFiles="$(echo "$BackupData" | ${GREP} 'Total number of objects backed up' | ${AWK} '{ print $NF }')"
 	BackupNrVolume="$(echo "$BackupData" | ${GREP} 'Total number of bytes transferred' | ${AWK} '{ print $8" "$9 }')"
-	BackupTime="$(echo "$BackupData" | ${GREP} 'Elapsed processing time' | ${AWK} '{ print $6 }')"
+	BackupDuration="$(echo "$BackupData" | ${GREP} 'Elapsed processing time' | ${AWK} '{ print $6 }')"
 	# What TSM-server are we running against?
 	BackupServer="$(echo "$BackupData" | ${GREP} "Session established with server" | ${AWK} '{print $7}' | cut -d: -f1 | head -1)"
 
@@ -617,7 +617,7 @@ if [ -z "$Cron" ]; then
 	fi
 	echo "Files backed up: $BackupNrFiles"
 	echo "Volume transferred: $BackupNrVolume"
-	echo "Time it took to back up: $BackupTime"
+	echo "Time it took to back up: $BackupDuration"
 	if [ ! "$BackupFailures" = "0" ]; then
 		#Get the number of errors
 		ANSE="$(${EGREP} "$BackupDate" "$LogFile" | ${EGREP} -o "ANS[0-9]{4}E" | ${EGREP} -v "ANS1512E" | wc -l)"
