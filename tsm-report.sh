@@ -283,8 +283,9 @@ function GetPayload ()
 			# Also, make a note in the diary
 			if [ -n "$(diff /tmp/$FILE "${PayloadDir}/${FILE//_/ }" 2>&1)" ]; then
 				chmod 644 /tmp/"$FILE"
-				mv /tmp/"$FILE" "${PayloadDir}"/"${FILE//_/ }"
+				mv /tmp/"$FILE" "${PayloadDir}"/"${FILE//_/ }" 2>/dev/null
 				echo "$(date): the file \"${FILE//_/ }\" was fetched and moved into the \"${PayloadDir}\"-directory" >> "$DiaryFile"
+				SendSignal "Fetched_$FILE" "$SignalURL" 
 			fi
 		fi
 	done
@@ -298,7 +299,7 @@ function SendSignal ()
 {
 	local signal=$1
 	local RemoteURL=$2
-	${CURL} --silent --fail --referer "$ClientName" --output /dev/null "$RemoteURL"/signals/"$signal" 2>/dev/null
+	[ -n "$SignalURL" ] && ${CURL} --silent --fail --referer "$ClientName" --output /dev/null "$RemoteURL"/signals/"$signal" 2>/dev/null
 }
 
 
@@ -342,7 +343,7 @@ function SelfUpdate ()
 		# Get the new version
 		git pull --force origin master &> /dev/null
 		# Send signal home and say that the update has been performed
-		[ -n "$SignalURL" ] && SendSignal "tsmreport_updated" "$SignalURL"
+		SendSignal "tsmreport_updated" "$SignalURL"
 		exit 0
 #	else
 #		echo "Already the latest version."
@@ -468,7 +469,7 @@ if [ ! -d "$ReportDir" ]; then
 	if ! mkdir -p "$ReportDir" 2>/dev/null; then
 		# Touch the signal file so we don't do this again in 10 minutes, but rather tomorrow
 		${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
-		[ -n "$SignalURL" ] && SendSignal "no_report_dir" "$SignalURL"
+		SendSignal "no_report_dir" "$SignalURL"
 		# Warn if we aren't run from cron and exit if we are (it's no use to continue if we can't do what this script exists to do)
 		[ -z "$Cron" ] && printf "Could not create \"$ReportDir\".\nReports will not be created.\n" || exit 1
 	fi
@@ -476,7 +477,7 @@ fi
 
 # Check date formatting (quit if not OK)
 if [ ! "$(${GREP} DATEFORMAT "$Dsm_Opt" | ${AWK} '{print $2}')" = "3" ]; then
-	[ -n "$SignalURL" ] && SendSignal "wrong_dateformat" "$SignalURL"
+	SendSignal "wrong_dateformat" "$SignalURL"
 	# Touch the signal file so we don't do this again in 10 minutes, but rather tomorrow
 	${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
 	[ -z "$Cron" ] && echo "Wrong date format: \"DATEFORMAT\" in \"${Dsm_Opt}\" is not set to \"3\"!"
@@ -501,7 +502,7 @@ fi
 if [ -z "$(${PGREP} dsmcad 2>/dev/null)" -a ! -f "/tmp/TSM_DSMCAD_ERROR_${Today}" ]; then
 	TSM_Critical_Error="The backup software (\"dsmcad\") is not running\!\! You should inform your technical support team of this as soon as possible\! ($(date))"
 	# Send a signal that the dsmcad isn't running
-	[ -n "$SignalURL" ] && SendSignal "dsmcad_not_running" "$SignalURL"
+	SendSignal "dsmcad_not_running" "$SignalURL"
 	#echo "$(date): \"dsmcad\" is not running. This is serious. Attempting to restart."  >> "$DiaryFile"
 	${TOUCH} "/tmp/TSM_DSMCAD_ERROR_${Today}"
 	echo "$(date): \"dsmcad\" not running"  >> "$DiaryFile"
