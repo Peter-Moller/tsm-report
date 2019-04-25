@@ -1,5 +1,5 @@
 # tsm-report.sh
-A bash-script that gives a report of the TSM-backup on a TSM-client computer [running UNIX].  
+A bash-script that reports the backup from IBM:s Tivoli Storage Manager (TSM; now “Spectrum Protect”) on a TSM-client computer [running UNIX].  
 It does this by digging through the log file that the backup process produces.
 
 -----
