@@ -93,7 +93,7 @@ The following is a list of the steps involved:
    `  cat - > "$FileName"`  
    `fi`  
    `exit 0`  
-   This simple script will add the file you give it to `.ssh/authorized_keys` if the name you give it is “sshkey” (example: `ssh user@reportbackto.pretendco.com sshkey <.ssh/id_rsa.pub`). You might, however, make it as elaborate as you like, for instance storing of files in different places depending on names, dates etc. You can use the environment variables declared in `authorized_keys` for that
+   This simple script will add the file you give it to `.ssh/authorized_keys` if the name is “sshkey” (example: `ssh user@reportbackto.pretendco.com sshkey <.ssh/id_rsa.pub`). You might, however, make it as elaborate as you like, for instance storing of files in different places depending on names, dates etc. You can use the environment variables declared in `authorized_keys` for that
 3. Make sure that `sshd` is active on that machine and that the firewall(s) are opened for `ssh`
 4. On the client, add `ReportBackUser="username"` and `ReportBackTo="machine2.pretendco.com"` to the settings file (`/etc/tsm-report.settings`) using proper values, of course
 5. Also on the client, create a `ssh`-key as the user who will be running `tsm-report.sh` using `ssh-keygen -t rsa` or `ssh-keygen -t ed25519`
