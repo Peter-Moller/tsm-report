@@ -83,15 +83,15 @@ The following is a list of the steps involved:
 2. Create a shell script that will later be used as login shell for this user, for instance `/usr/local/bin/skal.sh`  
    This script will take `stdin` from `ssh` and store it in a location. It can be as simple as this:  
    `#!/bin/bash`  
-   `temp="$@"`
-   `FileName="${temp/-c /}"`
-   `if [ "$FileName" = "sshkey" ]; then`
-   `  cat - >> .ssh/authorized_keys`
-   `  echo "Added to .ssh/authorized_keys"^
-   `else`
-   `  cat - > "${FileName/-c /}"`
+   `temp="$@"`  
+   `FileName="${temp/-c /}"`  
+   `if [ "$FileName" = "sshkey" ]; then`  
+   `  cat - >> .ssh/authorized_keys`  
+   `  echo "Added to .ssh/authorized_keys"`  
+   `else`  
+   `  cat - > "${FileName/-c /}"`  
    `fi`  
-   `exit 0`    
+   `exit 0`  
    This simple script will add the file you give it to `.ssh/authorized_keys` if the name you give it is “sshkey” (example: `ssh user@reportbackto.pretendco.com sshkey <.ssh/id_rsa.pub`). You might, however, make it as elaborate as you like, for instance storing of files in different places depending on names, dates etc. You can use the environment variables declared in `authorized_keys` for that
 3. Make sure that `sshd` is active on that machine and that the firewall(s) are opened for `ssh`
 4. On the client, add `ReportBackUser="username"` and `ReportBackTo="machine2.pretendco.com"` to the settings file (`/etc/tsm-report.settings`) using proper values, of course
