@@ -2,6 +2,8 @@
 A bash-script that reports the backup from IBM:s Tivoli Storage Manager (TSM; now “Spectrum Protect”) on a TSM-client computer [running UNIX].  
 It does this by digging through the log file that the backup process produces.
 
+Primary audience is system administrators managing a TSM installation, but anyone with TSM on their machine can use it to get report on how the backup is performing on their system.
+
 -----
 
 ## Features
