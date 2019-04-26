@@ -25,9 +25,10 @@ I use the same server for `SignalURL`, `PayloadURL` and `ReportBackTo`, but you 
    * WSL (Windows Subsystem for Linux) is running and
    * `cron` is running. I suggest to put `service start cron` in `.profile`
    * To make WSL start when you log in to Windows, you can take [this VBS-script](https://gist.github.com/leonelsr/cde77574519eb1fd672bc9690e01257e) and store it in `C:\Users\my-user-name\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`
-6. If you want to be able to have log files sent “back home”, read the section ”In detail: Upload functionality” below
-7. If you want to download extra files (“payload”), read the section ”In detail: Downloading extras” below
-8. If you want to use “signals”, read the section ”In detail: Sending signals” below
+6. If you want any of the optional functions (send signals, download payload or send logfile home), make sure you have `curl` installed on your system! On macOS it's included; on Linux, you get it with `sudo apt-get install curl`
+7. If you want to be able to have log files sent “back home”, read the section ”In detail: Upload functionality” below
+8. If you want to download extra files (“payload”), read the section ”In detail: Downloading extras” below
+9. If you want to use “signals”, read the section ”In detail: Sending signals” below
 
 
 **Optional settings:**
