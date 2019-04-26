@@ -17,7 +17,7 @@ I use the same server for `SignalURL`, `PayloadURL` and `ReportBackTo`, but you 
 
 ## Installation:
 
-1. Download or clone this repository
+1. Download or clone this repository (`git clone https://www.github.com/peter-moller/tsm-report` in a terminal window)
 2. As a convenience: create a symlink to the script somewhere on `$PATH`, like `/usr/local/bin`
 3. Create the directories `/TSM` and `/TSM/DailyReports` and make sure the user who is going to run `tsm-report.sh` can write in those directories. In the former directory, payload files are stored, and in the latter, local reports are created daily for the convenience of the user. Those files are kept for 30 days
 4. Add the script (or the link) to `cron`, such as `*/10 * * * * /usr/local/bin/tsm-report.sh`. This is needed for the auto-update functionality
@@ -25,7 +25,7 @@ I use the same server for `SignalURL`, `PayloadURL` and `ReportBackTo`, but you 
    * WSL (Windows Subsystem for Linux) is running and
    * `cron` is running. I suggest to put `service start cron` in `.profile`
    * To make WSL start when you log in to Windows, you can take [this VBS-script](https://gist.github.com/leonelsr/cde77574519eb1fd672bc9690e01257e) and store it in `C:\Users\my-user-name\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`
-6. If you want any of the optional functions (send signals, download payload or send logfile home), make sure you have `curl` installed on your system! On macOS it's included; on Linux, you get it with `sudo apt-get install curl`
+6. If you want any of the optional functions (send signals, download payload or send logfile home), make sure you have `curl` installed on your system! (On macOS it's included; on Linux, you get it with `sudo apt-get install curl`)
 7. If you want to be able to have log files sent “back home”, read the section ”In detail: Upload functionality” below
 8. If you want to download extra files (“payload”), read the section ”In detail: Downloading extras” below
 9. If you want to use “signals”, read the section ”In detail: Sending signals” below
