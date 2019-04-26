@@ -133,7 +133,6 @@ TSM_TITLE="Backup Message $(date +%Y-%m-%d):"
 TSM_Warning=""
 TSM_Error=""
 success=""
-WarningNr="0"
 TSM_Critical_Error=""
 ReportDir="/TSM/DailyReports"
 PayloadDir="${ReportDir/\/DailyReports/}"
@@ -144,7 +143,7 @@ Today="$(date +%Y-%m-%d)"  # Ex: Today='2019-03-18'
 ErrorFileName="${ReportDir}/Errors_${ClientName}_${Today}.txt"
 BigFileName="${ReportDir}/Bigfiles_${ClientName}_${Today}.txt"
 BackedUpFileName="${ReportDir}/Backed_up_${ClientName}_${Today}.txt"
-Warning=""
+NoBackupToday=""
 timestamp=""
 DATEFORMAT=""
 DebugFile="/tmp/tsm-report_debug_${ClientName}_$(date +%F"_"%T).txt"
@@ -555,7 +554,7 @@ else
 	BackupResult="$(echo "$LastResult" | ${EGREP} -o "failed.*")"
 fi
 # If the last successful backup was NOT today, set warning flag:
-[ "$LastDay" = "$Today" ] || Warning="t"
+[ "$LastDay" = "$Today" ] || NoBackupToday="t"
 
 # Get the backup data
 GetBackupResult "$LastDay"
@@ -572,7 +571,7 @@ GetBackupResult "$LastDay"
 [ "$timestamp" = "t" ] && TSM_BANNER="$(date): " || TSM_BANNER=""
 
 # Create the message
-if [ "$Warning" = "t" ]; then
+if [ "$NoBackupToday" = "t" ]; then
 	BackupMessage="${TSM_BANNER}W_A_R_N_I_N_G: last successful TSM-backup with \"$BackupServer\" was $BackupDate. $TSM_Warning"
 elif [ "$short" = "t" ] ; then
 	BackupMessage="${TSM_BANNER}Backup Successful" ;
@@ -611,7 +610,7 @@ if [ -z "$Cron" ]; then
 	if [ -n "$TSM_Critical_Error" ]; then
 		printf "${ESC}${RedFont}mCRITICAL ERROR: $TSM_Critical_Error${Reset}\n"
 	fi
-	if [ "$Warning" = "t" ]; then
+	if [ "$NoBackupToday" = "t" ]; then
 		printf "${ESC}${RedFont}mW A R N I N G:  last successful TSM-backup was $BackupDate at $BackupTime${Reset}\n"
 		echo "$TSM_Warning"
 	else
@@ -650,16 +649,6 @@ if [ -z "$Cron" ]; then
 		echo "No errors were encountered."
 	fi
 
-
-	# Additional errors
-	if [[ $WarningNr -ne 0 ]]; then
-		echo "Additional error[s]:"
-		for ((i = 1; i <= "$WarningNr"; i += 1))
-		do
-			echo "${TSM_Error[$i]}"
-		done
-	fi
-
 	[ "$Debug" = "t" ] && echo "$(date): exit (at the end of the interaktive report)" >> "$DebugFile"
 
 	exit 0
@@ -671,19 +660,14 @@ fi
 
 [ "$Debug" = "t" ] && echo "$(date): before check of no success and no warning" >> "$DebugFile"
 
-# No success and no warning .: TSM has not run today so there is nothing to report (yet)!!
+# No backup today and no warning .: TSM has not run today so there is nothing to report (yet)!!
 # Just exit
-if [ -z "$success" -a -z "$TSM_Warning" ]; then
+if [ "$NoBackupToday" = "t" -a -z "$TSM_Warning" ]; then
 	[ "$Debug" = "t" ] && echo "$(date): exit (no backup and no errors)" >> "$DebugFile"
 	exit 0
 fi
 
 [ "$Debug" = "t" ] && echo "$(date): before display of normal message" >> "$DebugFile"
-
-# If we have not exited before coming here, it must mean that we have something to report. Either:
-# - success
-# - TSM_Warning
-# is NOT empty! Let's report that!
 
 # If dsmcad isn't running, make a special note about that
 if [ -n "$TSM_Critical_Error" ]; then
@@ -740,6 +724,11 @@ ${FIND} "$ReportDir" -name 'Errors_*' -type f -mtime +30d -exec rm -f {} \;
 # Remove the old signal file and create a new one
 rm -f "/tmp/TSM_user_notified_${ClientName}_201[0-9]-[0-9-]*" 2>/dev/null
 ${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
+#?# # Set owner of all signal files to be the user running the console (and if none, user 501)
+#?# /usr/sbin/chown "${RunningConsoleUserID:-501}":staff "/tmp/tsm_*" 2>/dev/null
+
+[ "$Debug" = "t" ] && echo "$(date): (end of script)" >> "$DebugFile"
+exit 0${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
 #?# # Set owner of all signal files to be the user running the console (and if none, user 501)
 #?# /usr/sbin/chown "${RunningConsoleUserID:-501}":staff "/tmp/tsm_*" 2>/dev/null
 
