@@ -576,7 +576,7 @@ if [ "$NoBackupToday" = "t" ]; then
 elif [ "$short" = "t" ] ; then
 	BackupMessage="${TSM_BANNER}Backup Successful" ;
 elif [ "$short" = "f" ]; then 
-	BackupMessage="${TSM_BANNER}$BackedUpFiles files backed up by server \"$BackupServer\". $BackedUpVolume was transferred in $BackedUpTime"
+	BackupMessage="${TSM_BANNER}$BackupNrFiles files backed up by server \"$BackupServer\". $BackupNrVolume was transferred in $BackupDuration"
 fi
 
 # Add warning, if any
@@ -724,13 +724,6 @@ ${FIND} "$ReportDir" -name 'Errors_*' -type f -mtime +30d -exec rm -f {} \;
 # Remove the old signal file and create a new one
 rm -f "/tmp/TSM_user_notified_${ClientName}_201[0-9]-[0-9-]*" 2>/dev/null
 ${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
-#?# # Set owner of all signal files to be the user running the console (and if none, user 501)
-#?# /usr/sbin/chown "${RunningConsoleUserID:-501}":staff "/tmp/tsm_*" 2>/dev/null
-
-[ "$Debug" = "t" ] && echo "$(date): (end of script)" >> "$DebugFile"
-exit 0${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
-#?# # Set owner of all signal files to be the user running the console (and if none, user 501)
-#?# /usr/sbin/chown "${RunningConsoleUserID:-501}":staff "/tmp/tsm_*" 2>/dev/null
 
 [ "$Debug" = "t" ] && echo "$(date): (end of script)" >> "$DebugFile"
 exit 0
