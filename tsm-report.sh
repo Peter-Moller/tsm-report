@@ -714,12 +714,15 @@ ${GREP} "^$Today" "$BackedUpFileName" | ${EGREP} " ANS[0-9]{4}E " > "$ErrorFileN
   
 # House keeping: remove old report files
 # Remove Backup reports that are older than 30 days
-${FIND} "$ReportDir" -name 'Backed_up_*' -type f -mtime +30d -exec rm -f {} \;
-# clean out BigFiles that are older than 30 days
-${FIND} "$ReportDir" -name 'Bigfiles_*' -type f -mtime +30d -exec rm -f {} \;
-# clean out Errors that are older than 30 days
-${FIND} "$ReportDir" -name 'Errors_*' -type f -mtime +30d -exec rm -f {} \;
-
+if [ -z "${OS/Darwin/}" ]; then
+	${FIND} "$ReportDir" -name 'Backed_up_*' -type f -mtime +30d -exec rm -f {} \;
+	${FIND} "$ReportDir" -name 'Bigfiles_*' -type f -mtime +30d -exec rm -f {} \;
+	${FIND} "$ReportDir" -name 'Errors_*' -type f -mtime +30d -exec rm -f {} \;
+else
+	${FIND} "$ReportDir" -name 'Backed_up_*' -type f -mtime 30 -exec rm -f {} \;
+	${FIND} "$ReportDir" -name 'Bigfiles_*' -type f -mtime 30 -exec rm -f {} \;
+	${FIND} "$ReportDir" -name 'Errors_*' -type f -mtime 30 -exec rm -f {} \;
+fi
 
 # Remove the old signal file and create a new one
 rm -f "/tmp/TSM_user_notified_${ClientName}_201[0-9]-[0-9-]*" 2>/dev/null
