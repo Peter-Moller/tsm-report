@@ -40,6 +40,7 @@ It does this by digging through the log file that the backup process produces.
 
 * `DATEFORMAT` needs to be `3` for this reporting to work ([ISO 8601](https://en.wikipedia.org/wiki/ISO_8601); YYYY-MM-DD). This is set in the `dsm.opt`file
 * `curl` is assumed to exist. It is used for sending signals and to check if the log file should be send “home”; no harm will come if your system doesn't have it, but these functions will not work
+* `git` needs to be installed (it's used for the automatic update)
 
 -----
 ## Screen shots:
