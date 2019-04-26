@@ -170,7 +170,7 @@ ScriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # What is the name of the script? (without any PATH)
 ScriptName="$(basename $0)"
 # When '$ScriptDir' is a link, we need to find the “real” directory; 'ScriptRealDir'.
-# This is ised for finding the errors and also for updating
+# This is used for finding the errors-file and also for updating
 [ -L "${ScriptDir}/${ScriptName}" ] && ScriptRealDir="$(dirname "$(readlink "${ScriptDir}/${ScriptName}")")" || ScriptRealDir="$ScriptDir"
 # Is the file writable?
 if [ -w "${ScriptRealDir}"/"${ScriptName}" ]; then
@@ -336,6 +336,8 @@ function SendHome ()
 # Update the script
 function SelfUpdate ()
 {
+	# Return immediately if there's no 'git' on the system
+	[ ! -x /usr/bin/git ] && return
 	cd "$ScriptRealDir"
 	# Get the metadata for the repo
 	git fetch --all &> /dev/null
@@ -527,7 +529,7 @@ if [ -n "$(${FIND} ${ScriptRealDir}/${ScriptName} -type f -mtime +7d 2> /dev/nul
 	# But only report if AutoUpdate = "t"
 	if [ "$AutoUpdate" = "t" ]; then
 		# Display warning if we are interactive
-		[ -z "$Cron" ] && echo "The script is too old, updating"
+		[ -z "$Cron" ] && echo "Updating the script"
 		# If there is a payload, get it
 		[ -n "$PayloadURL" ] && GetPayload
 		SelfUpdate
