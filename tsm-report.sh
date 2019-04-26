@@ -501,13 +501,16 @@ fi
 # See if dsmcad is not running and no signalfile has been produced
 # Send a signal to the server and make a note of it in the DiaryFile
 # We do not, however, restart the dsmcad (since some people want it to be off)
-if [ -z "$(${PGREP} dsmcad 2>/dev/null)" -a ! -f "/tmp/TSM_DSMCAD_ERROR_${Today}" ]; then
-	TSM_Critical_Error="The backup software (\"dsmcad\") is not running\!\! You should inform your technical support team of this as soon as possible\! ($(date))"
-	# Send a signal that the dsmcad isn't running
-	SendSignal "dsmcad_not_running" "$SignalURL"
-	#echo "$(date): \"dsmcad\" is not running. This is serious. Attempting to restart."  >> "$DiaryFile"
-	${TOUCH} "/tmp/TSM_DSMCAD_ERROR_${Today}"
-	echo "$(date): \"dsmcad\" not running"  >> "$DiaryFile"
+# Don't do this on Windows since we can't see Windows processes in WSL
+if [ ! "$OS" = "Windows" ]; then
+	if [ -z "$(${PGREP} dsmcad 2>/dev/null)" -a ! -f "/tmp/TSM_DSMCAD_ERROR_${Today}" ]; then
+		TSM_Critical_Error="The backup software (\"dsmcad\") is not running\!\! You should inform your technical support team of this as soon as possible\! ($(date))"
+		# Send a signal that the dsmcad isn't running
+		SendSignal "dsmcad_not_running" "$SignalURL"
+		#echo "$(date): \"dsmcad\" is not running. This is serious. Attempting to restart."  >> "$DiaryFile"
+		${TOUCH} "/tmp/TSM_DSMCAD_ERROR_${Today}"
+		echo "$(date): \"dsmcad\" not running"  >> "$DiaryFile"
+	fi
 fi
 
 [ "$Debug" = "t" ] && echo "$(date): End of basic controls" >> "$DebugFile"
