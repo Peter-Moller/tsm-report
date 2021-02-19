@@ -111,12 +111,14 @@ if [ -z "${OS/Windows/}" ]; then
 	Dsm_Opt="${TSMDirName}/dsm.opt"
 	LogFile="/mnt/c/TSM-logs/dsmsched.log"
 	ClientName="$(${GREP} -i "NodeName" "$Dsm_Opt" | ${AWK} '{print $2}' | ${SED} 's/\r//g')"
+	ReportDir="/TSM/DailyReports"
 elif [ -z "${OS/Darwin/}" ]; then
 	TSMDirName="/Library/Application Support/tivoli/tsm/client/ba/bin"
 	Dsm_Opt="/Library/Preferences/Tivoli Storage Manager/dsm.opt"
 	Dsm_Sys="${TSMDirName}/dsm.sys"
 	LogFile="/Library/Logs/tivoli/tsm/dsmsched.log"
 	ClientName="$(${GREP} -i "NodeName" "$Dsm_Sys" | ${AWK} '{print $2}')"
+	ReportDir="/Users/Shared/TSM/DailyReports"
 elif [ -z "${OS/Linux/}" ]; then
 	#TSMDirName="$(dirname "$(lsof -p $(pgrep dsmcad) 2>/dev/null | ${EGREP} "dsmcad$" | ${EGREP} -o "\/.*$" )")"  # Ex: '/opt/tivoli/tsm/client/ba/bin'
 	TSMDirName="/opt/tivoli/tsm/client/ba/bin"
@@ -124,6 +126,7 @@ elif [ -z "${OS/Linux/}" ]; then
 	Dsm_Opt="${TSMDirName}/dsm.opt"
 	LogFile="$(${EGREP} "^DSM_LOG=" "$TSMDirName"/rc.dsmcad | cut -d= -f2)/dsmsched.log"
 	ClientName="$(${GREP} -i "NodeName" "$Dsm_Sys" | ${AWK} '{print $2}')"
+	ReportDir="/TSM/DailyReports"
 fi
 
 
@@ -134,7 +137,6 @@ TSM_Warning=""
 TSM_Error=""
 success=""
 TSM_Critical_Error=""
-ReportDir="/TSM/DailyReports"
 PayloadDir="${ReportDir/\/DailyReports/}"
 TSMCommonError="tsm_common_errors.txt"
 DiaryFile="${ReportDir}/TSM_Diary_${ClientName}.txt"
