@@ -62,38 +62,12 @@ short=f
 #===============================================================
 # Read options
 
-while getopts ":du" opt; do
+while getopts ":d" opt; do
 	case $opt in
 		d ) Debug="t";;
-		u ) Update="t";;
 		\?|H ) help;;
 	esac
 done
-
-
-###################################################################################
-###                      I N I T I A L I Z A T I O N S                          ###
-###################################################################################
-
-# COMMANDS (to make sure the correct commands are used)
-# Some commands differ between different unixes
-AWK=/usr/bin/awk
-CRONTAB=/usr/bin/crontab
-CURL=/usr/bin/curl
-CUT=/usr/bin/cut
-[ -x /usr/bin/egrep ] && EGREP=/usr/bin/egrep || EGREP=/bin/egrep
-FIND=/usr/bin/find
-[ -x /usr/bin/grep ] && GREP=/usr/bin/grep || GREP=/bin/grep
-LESS=/usr/bin/less
-PGREP=/usr/bin/pgrep
-[ -x /usr/bin/ps ] && PS=/usr/bin/ps || PS=/bin/ps
-[ -x /usr/bin/rm ] && RM=/usr/bin/rm || RM=/bin/rm
-[ -x /usr/bin/sed ] && SED=/usr/bin/sed || SED=/bin/sed
-SSH=/usr/bin/ssh
-TAIL=/usr/bin/tail
-TEE=/usr/bin/tee
-TOUCH=/usr/bin/touch
-
 
 # +------------------------------------------------------------------------+
 # |                  Operating System specific settings                    |
@@ -110,22 +84,22 @@ if [ -z "${OS/Windows/}" ]; then
 	Dsm_Sys="/mnt/c/Program Files/Tivoli/TSM/baclient/dsm.opt"
 	Dsm_Opt="${TSMDirName}/dsm.opt"
 	LogFile="/mnt/c/TSM-logs/dsmsched.log"
-	ClientName="$(${GREP} -i "NodeName" "$Dsm_Opt" | ${AWK} '{print $2}' | ${SED} 's/\r//g')"
+	ClientName="$(grep -i "NodeName" "$Dsm_Opt" | awk '{print $2}' | sed 's/\r//g')"
 	ReportDir="/TSM/DailyReports"
 elif [ -z "${OS/Darwin/}" ]; then
 	TSMDirName="/Library/Application Support/tivoli/tsm/client/ba/bin"
 	Dsm_Opt="/Library/Preferences/Tivoli Storage Manager/dsm.opt"
 	Dsm_Sys="${TSMDirName}/dsm.sys"
 	LogFile="/Library/Logs/tivoli/tsm/dsmsched.log"
-	ClientName="$(${GREP} -i "NodeName" "$Dsm_Sys" | ${AWK} '{print $2}')"
+	ClientName="$(grep -i "NodeName" "$Dsm_Sys" | awk '{print $2}')"
 	ReportDir="/Users/Shared/TSM/DailyReports"
 elif [ -z "${OS/Linux/}" ]; then
-	#TSMDirName="$(dirname "$(lsof -p $(pgrep dsmcad) 2>/dev/null | ${EGREP} "dsmcad$" | ${EGREP} -o "\/.*$" )")"  # Ex: '/opt/tivoli/tsm/client/ba/bin'
+	#TSMDirName="$(dirname "$(lsof -p $(pgrep dsmcad) 2>/dev/null | grep -E "dsmcad$" | grep -E -o "\/.*$" )")"  # Ex: '/opt/tivoli/tsm/client/ba/bin'
 	TSMDirName="/opt/tivoli/tsm/client/ba/bin"
 	Dsm_Sys="${TSMDirName}/dsm.sys"
 	Dsm_Opt="${TSMDirName}/dsm.opt"
-	LogFile="$(${EGREP} "^DSM_LOG=" "$TSMDirName"/rc.dsmcad | cut -d= -f2)/dsmsched.log"
-	ClientName="$(${GREP} -i "NodeName" "$Dsm_Sys" | ${AWK} '{print $2}')"
+	LogFile="$(grep -E "^DSM_LOG=" "$TSMDirName"/rc.dsmcad | cut -d= -f2)/dsmsched.log"
+	ClientName="$(grep -i "NodeName" "$Dsm_Sys" | awk '{print $2}')"
 	ReportDir="/TSM/DailyReports"
 fi
 
@@ -149,7 +123,7 @@ NoBackupToday=""
 timestamp=""
 DATEFORMAT=""
 DebugFile="/tmp/tsm-report_debug_${ClientName}_$(date +%F"_"%T).txt"
-#?# RunningConsoleUserID="$(${PS} -ef | ${GREP} "[l]oginwindow console" | ${AWK} '{print $1}')"
+#?# RunningConsoleUserID="$(ps -ef | grep "[l]oginwindow console" | awk '{print $1}')"
 
 
 # Read the settings
@@ -157,7 +131,6 @@ Settingsfile=/etc/tsm-report.settings
 PayloadURL=""
 SignalURL=""
 ReportBackTo=""
-AutoUpdate="t"
 # Get settings from the settings file:
 [ -r "$Settingsfile" ] && source "$Settingsfile"
 
@@ -182,7 +155,7 @@ fi
 # Who owns the script?
 ScriptOwner="$(ls -ls ${ScriptRealDir}/${ScriptName} | awk '{print $4":"$5}')"
 # Is it run through 'cron'? If so, $PATH is VERY limited ('/usr/bin:/bin') and that is used to determine that
-[ $(echo $PATH | ${EGREP} -o ":" | wc -l) -lt 3 ] && Cron="t" || Cron=""
+[ $(echo $PATH | grep -E -o ":" | wc -l) -lt 3 ] && Cron="t" || Cron=""
 
 
 
@@ -236,17 +209,17 @@ function GetFile ()
 	local FileToFetch=$2
 
 	# Exit if we don't have a curl on the system
-	[ ! -x $CURL ] && return
-	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch" "${RemoteURL}/${FileToFetch}"
+	[ ! -x curl ] && return
+	curl --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch" "${RemoteURL}/${FileToFetch}"
 	local ERR1=$?
-	${CURL} --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch".sha1 "${RemoteURL}/${FileToFetch}".sha1
+	curl --silent --fail --referer "$ClientName" --output /tmp/"$FileToFetch".sha1 "${RemoteURL}/${FileToFetch}".sha1
 	local ERR2=$?
 	# If there were any errors, don't do anything further
   	if [ "$ERR1" -ne 0 -o "$ERR2" -ne 0 ]; then
 		let ERR="$ERR1"+"$ERR2"
 	else
     	# OK, so we got the files, let's verify checksum
-	    if [ "$(openssl sha1 /tmp/${FileToFetch} | ${AWK} '{ print $2 }')" = "$(${LESS} /tmp/${FileToFetch}.sha1)" ]; then
+	    if [ "$(openssl sha1 /tmp/${FileToFetch} | awk '{ print $2 }')" = "$(less /tmp/${FileToFetch}.sha1)" ]; then
     		ERR=0
 	    else
     	 	ERR=1
@@ -299,7 +272,7 @@ function SendSignal ()
 	local RemoteURL=$2
 	# Exit if we don't have a curl on the system
 	[ ! -x $CURL ] && return
-	[ -n "$SignalURL" ] && ${CURL} --silent --fail --referer "$ClientName" --output /dev/null "$RemoteURL"/signals/"$signal" 2>/dev/null
+	[ -n "$SignalURL" ] && curl --silent --fail --referer "$ClientName" --output /dev/null "$RemoteURL"/signals/"$signal" 2>/dev/null
 }
 
 
@@ -316,9 +289,9 @@ function SendHome ()
 	# But only send home if the file has not already been sent today
 	if [ -n "$SignalURL" -a ! -f "/tmp/dsmsched_sent_home_${Today}_${ClientName}" ]; then
 		# Does a signal file exist at the server? If so, the log file needs to be sent home
-		if ${CURL} --silent --fail --referer "$ClientName" "${SignalURL}/send_home/${ClientName}"; then
+		if curl --silent --fail --referer "$ClientName" "${SignalURL}/send_home/${ClientName}"; then
 			# Send the file back up, but don't wait more than 10 seconds
-			${SSH} -o ConnectTimeout=30 "${ReportBackUser}@${ReportBackTo}" "$(basename "$LogFile")_${ClientName}_${Today}.txt" &> /dev/null < "$LogFile"
+			ssh -o ConnectTimeout=30 "${ReportBackUser}@${ReportBackTo}" "$(basename "$LogFile")_${ClientName}_${Today}.txt" &> /dev/null < "$LogFile"
 			# Did it work? If so, send a signal and create a signal file
 			if [ $? -eq 0 ]; then
 				SendSignal "send_home_ok" "$SignalURL"
@@ -331,28 +304,6 @@ function SendHome ()
 	fi
 
 	[ "$Debug" = "t" ] && echo "$(date): inside function SendHome, after sending dsmsched home" >> "$DebugFile"
-}
-
-
-# Update the script
-function SelfUpdate ()
-{
-	# Return immediately if there's no 'git' on the system
-	[ ! -x /usr/bin/git ] && return
-	cd "$ScriptRealDir"
-	# Get the metadata for the repo
-	git fetch --all &> /dev/null
-	if [ -n "$(git diff --name-only origin/master | grep "$ScriptName")" ]; then
-		# Reset the local repo so we are in a consistent state with the server
-		git reset --hard origin/master &> /dev/null
-		# Get the new version
-		git pull --force origin master &> /dev/null
-		# Send signal home and say that the update has been performed
-		SendSignal "tsmreport_updated" "$SignalURL"
-		exit 0
-#	else
-#		echo "Already the latest version."
-	fi
 }
 
 
@@ -372,7 +323,7 @@ function GetBackupResult ()
 	local Day=$1
 	
 	# Grab the relevant lines between 'SCHEDULEREC STATUS BEGIN' and 'Scheduled event':
-	BackupData="$(${EGREP} "^$Day" "$LogFile" | awk '/SCHEDULEREC STATUS BEGIN/{a=1}/ Session established with server /{print;a=0}a')"
+	BackupData="$(grep -E "^$Day" "$LogFile" | awk '/SCHEDULEREC STATUS BEGIN/{a=1}/ Session established with server /{print;a=0}a')"
 	# This gives:
 	# 2019-03-26 02:53:59 Session established with server TSM3: Linux/x86_64
 	# 2019-03-26 03:07:11 --- SCHEDULEREC STATUS BEGIN
@@ -410,26 +361,26 @@ function GetBackupResult ()
 	# 2019-03-20 02:29:05 ANS1512E Scheduled event 'DAILY_MACSERVERS' failed.  Return code = 12.
 
 	# Get the number of different objects:
-	BackupDate="$(echo "$BackupData" | ${GREP} ' --- SCHEDULEREC STATUS END' | ${AWK} '{ print $1 }')"   # Gives: BackupDate=2013-12-03
-	BackupTime="$(echo "$BackupData" | ${GREP} ' --- SCHEDULEREC STATUS END' | ${AWK} '{ print $2 }')"   # BackupTime=09:02:29
-	BackupFailures="$(echo "$BackupData" | ${EGREP} 'Total number of objects failed' | ${AWK} '{ print $NF }')"
-	BackupNrFiles="$(echo "$BackupData" | ${GREP} 'Total number of objects backed up' | ${AWK} '{ print $NF }')"
-	BackupNrVolume="$(echo "$BackupData" | ${GREP} 'Total number of bytes transferred' | ${AWK} '{ print $8" "$9 }')"
-	BackupDuration="$(echo "$BackupData" | ${GREP} 'Elapsed processing time' | ${AWK} '{ print $6 }')"
+	BackupDate="$(echo "$BackupData" | grep ' --- SCHEDULEREC STATUS END' | awk '{ print $1 }')"   # Gives: BackupDate=2013-12-03
+	BackupTime="$(echo "$BackupData" | grep ' --- SCHEDULEREC STATUS END' | awk '{ print $2 }')"   # BackupTime=09:02:29
+	BackupFailures="$(echo "$BackupData" | grep -E 'Total number of objects failed' | awk '{ print $NF }')"
+	BackupNrFiles="$(echo "$BackupData" | grep 'Total number of objects backed up' | awk '{ print $NF }')"
+	BackupNrVolume="$(echo "$BackupData" | grep 'Total number of bytes transferred' | awk '{ print $8" "$9 }')"
+	BackupDuration="$(echo "$BackupData" | grep 'Elapsed processing time' | awk '{ print $6 }')"
 	# What TSM-server are we running against?
-	BackupServer="$(echo "$BackupData" | ${GREP} "Session established with server" | ${AWK} '{print $7}' | cut -d: -f1 | head -1)"
+	BackupServer="$(echo "$BackupData" | grep "Session established with server" | awk '{print $7}' | cut -d: -f1 | head -1)"
 
 	# Look for >5 of the infamous ANS1029E/ANS1017E messages and create warning message accordingly
 	# However, ignore error messages during the night (when there is no scheduler) from houres 01, 02, 03, 04, 05, 06.
 	# TSM_Warning≠"" constitutes a REAL failure that should be alerted!
-	if [ "$(${GREP} "$Day" "$LogFile" 2>/dev/null | ${EGREP} 'ANS1029E Communication with the  TSM server is lost' | ${GREP} -v " 0[123456]:" | wc -l | ${AWK} '{ print $1 }')" -gt 5 ]; then
+	if [ "$(grep "$Day" "$LogFile" 2>/dev/null | grep -E 'ANS1029E Communication with the  TSM server is lost' | grep -v " 0[123456]:" | wc -l | awk '{ print $1 }')" -gt 5 ]; then
 		TSM_Warning="W A R N I N G:  Communication with the TSM-server \"$BackupServer\" cannot be established. Contact the system administrator\!\!\!\!\!\!\!"
 	fi
-	if [ "$(${GREP} "$Day" "$LogFile" 2>/dev/null | ${EGREP} 'ANS1017E Session rejected: TCP/IP connection failure' | ${GREP} -v " 0[123456]:" | wc -l | ${AWK} '{ print $1 }')" -gt 5 ]; then
+	if [ "$(grep "$Day" "$LogFile" 2>/dev/null | grep -E 'ANS1017E Session rejected: TCP/IP connection failure' | grep -v " 0[123456]:" | wc -l | awk '{ print $1 }')" -gt 5 ]; then
 		TSM_Warning="W A R N I N G:  The TSM-server \"$BackupServer\" cannot be contacted (may be down?). Contact the system administrator\!\!\!\!\!\!\!"
 	fi
 	# Also, look for ANS1311E (Server out of data storage space)
-	if [ "$(${GREP} "$Day" "$LogFile" 2>/dev/null | ${EGREP} 'ANS1311E')" ]; then
+	if [ "$(grep "$Day" "$LogFile" 2>/dev/null | grep -E 'ANS1311E')" ]; then
 		TSM_Warning="W A R N I N G:  The TSM-server \"$BackupServer\" is out of space! Contact the system administrator\!\!\!\!\!\!\!"
 	fi
 }
@@ -459,7 +410,7 @@ function GetBackupResult ()
 # Exit if we cannot read the log file:
 if [ ! -r "$LogFile" ]; then
 	# Touch the signal file so we don't do this again in 10 minutes, but rather tomorrow
-	${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
+	touch "/tmp/TSM_user_notified_${ClientName}_${Today}"
 	[ "$Debug" = "t" ] && echo "$(date): exit (no log file)" >> "$DebugFile"
 	[ -n "$Cron" ] && exit 1
 	echo "The script can't read the log file (\"$LogFile\")! Either:"
@@ -473,7 +424,7 @@ fi
 if [ ! -d "$ReportDir" ]; then
 	if ! mkdir -p "$ReportDir" 2>/dev/null; then
 		# Touch the signal file so we don't do this again in 10 minutes, but rather tomorrow
-		${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
+		touch "/tmp/TSM_user_notified_${ClientName}_${Today}"
 		SendSignal "no_report_dir" "$SignalURL"
 		# Warn if we aren't run from cron and exit if we are (it's no use to continue if we can't do what this script exists to do)
 		[ -z "$Cron" ] && printf "Could not create \"$ReportDir\".\nReports will not be created.\n" || exit 1
@@ -481,17 +432,17 @@ if [ ! -d "$ReportDir" ]; then
 fi
 
 # Check date formatting (quit if not OK)
-if [ ! "$(${GREP} DATEFORMAT "$Dsm_Opt" | ${AWK} '{print $2}')" = "3" ]; then
+if [ ! "$(grep DATEFORMAT "$Dsm_Opt" | awk '{print $2}')" = "3" ]; then
 	SendSignal "wrong_dateformat" "$SignalURL"
 	# Touch the signal file so we don't do this again in 10 minutes, but rather tomorrow
-	${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
+	touch "/tmp/TSM_user_notified_${ClientName}_${Today}"
 	[ -z "$Cron" ] && echo "Wrong date format: \"DATEFORMAT\" in \"${Dsm_Opt}\" is not set to \"3\"!"
 	[ -z "$Cron" ] && echo "Script will now quit"
 	exit 1
 fi
 
 # Check to see if the logfile is short (to avoid this script just hanging)
-if [ -z "$(${GREP} ' --- SCHEDULEREC STATUS END' $LogFile)" ]; then
+if [ -z "$(grep ' --- SCHEDULEREC STATUS END' $LogFile)" ]; then
 	if [ -z "$Cron" ]; then
 		echo "The log file is too short to give any useful information."
 		echo "it has probably been truncated or just been started."
@@ -506,12 +457,12 @@ fi
 # We do not, however, restart the dsmcad (since some people want it to be off)
 # Don't do this on Windows since we can't see Windows processes in WSL
 if [ ! "$OS" = "Windows" ]; then
-	if [ -z "$(${PGREP} dsmcad 2>/dev/null)" -a ! -f "/tmp/TSM_DSMCAD_ERROR_${Today}" ]; then
+	if [ -z "$(pgrep dsmcad 2>/dev/null)" -a ! -f "/tmp/TSM_DSMCAD_ERROR_${Today}" ]; then
 		TSM_Critical_Error="The backup software (\"dsmcad\") is not running\!\! You should inform your technical support team of this as soon as possible\! ($(date))"
 		# Send a signal that the dsmcad isn't running
 		SendSignal "dsmcad_not_running" "$SignalURL"
 		#echo "$(date): \"dsmcad\" is not running. This is serious. Attempting to restart."  >> "$DiaryFile"
-		${TOUCH} "/tmp/TSM_DSMCAD_ERROR_${Today}"
+		touch "/tmp/TSM_DSMCAD_ERROR_${Today}"
 		echo "$(date): \"dsmcad\" not running"  >> "$DiaryFile"
 	fi
 fi
@@ -526,14 +477,14 @@ fi
 [ "$Debug" = "t" ] && echo "$(date): start of script" >> "$DebugFile"
 
 # If the script is older than 7 days, update it and also get the latest payload
-if [ -n "$(${FIND} ${ScriptRealDir}/${ScriptName} -type f -mtime +7d 2> /dev/null)" -o "$Update" = "t" ]; then
+if [ -n "$(find ${ScriptRealDir}/${ScriptName} -type f -mtime +7d 2> /dev/null)" -o "$Update" = "t" ]; then
 	# But only report if AutoUpdate = "t"
 	if [ "$AutoUpdate" = "t" ]; then
 		# Display warning if we are interactive
 		[ -z "$Cron" ] && echo "Updating the script"
 		# If there is a payload, get it
 		[ -n "$PayloadURL" ] && GetPayload
-		SelfUpdate
+		#SelfUpdate
 		exit 0
 	fi
 fi
@@ -542,18 +493,18 @@ fi
 SendHome
 
 # Get the last result from the log file:
-LastResult="$(${EGREP} " Scheduled event " $LogFile | ${TAIL} -1)"
+LastResult="$(grep -E " Scheduled event " $LogFile | tail -1)"
 # May be:
 #  2019-04-24 09:31:03 Scheduled event 'DAILY_01' completed successfully.
 #  2019-04-23 09:29:19 ANS1512E Scheduled event 'DAILY_01_W' failed.  Return code = 12.
 
 # Get the date:
-LastDay="$(echo "$LastResult" | ${AWK} '{print $1}')"   # LastDay='2019-04-24'
+LastDay="$(echo "$LastResult" | awk '{print $1}')"   # LastDay='2019-04-24'
 # Success or not?
-if [ -n "$(echo "$LastResult" | ${EGREP} -o "completed successfully")" ]; then
+if [ -n "$(echo "$LastResult" | grep -E -o "completed successfully")" ]; then
 	BackupResult="completed successfully"
 else
-	BackupResult="$(echo "$LastResult" | ${EGREP} -o "failed.*")"
+	BackupResult="$(echo "$LastResult" | grep -E -o "failed.*")"
 fi
 # If the last successful backup was NOT today, set warning flag:
 [ "$LastDay" = "$Today" ] || NoBackupToday="t"
@@ -597,9 +548,9 @@ if [ -z "$Cron" ]; then
 	# Check that $ReportDir exists and is writable
 	[ -w "$ReportDir" ] || echo "Report directory (\"$ReportDir\") not writeable!"
 	# Check that the report script runs periodically
-	CronCommand="$(${CRONTAB} -l | ${EGREP} "${ScriptName}" | sed -e 's/^\([^ ]* \)\{5\}//')"  # CronCommand='/usr/local/bin/tsm-report.sh 2>/tmp/tsm-report_cron_std_err'
+	CronCommand="$(crontab -l | grep -E "${ScriptName}" | sed -e 's/^\([^ ]* \)\{5\}//')"  # CronCommand='/usr/local/bin/tsm-report.sh 2>/tmp/tsm-report_cron_std_err'
 	# Is the script correctly set up to work through 'cron'?
-	if [ -z "$(echo "$CronCommand" | ${EGREP} -o "${ScriptDir}/${ScriptName}")" -a -z "$(echo "$CronCommand" | ${EGREP} -o "${ScriptRealDir}/${ScriptName}")" ]; then
+	if [ -z "$(echo "$CronCommand" | grep -E -o "${ScriptDir}/${ScriptName}")" -a -z "$(echo "$CronCommand" | grep -E -o "${ScriptRealDir}/${ScriptName}")" ]; then
 		printf "The script (\"${ScriptDir}/${ScriptName}\") is not set up to run periodically through \"crontab\" — at least not as the current user.\nYou should see to this!\n\n"
 	fi
 	# Is dsmcad not running? Warn if so. (Not on Windows since we cannot see the processes on Windows)
@@ -631,12 +582,12 @@ if [ -z "$Cron" ]; then
 	echo "Time it took to back up: $BackupDuration"
 	if [ ! "$BackupFailures" = "0" ]; then
 		#Get the number of errors
-		ANSE="$(${EGREP} "$BackupDate" "$LogFile" | ${EGREP} -o "ANS[0-9]{4}E" | ${EGREP} -v "ANS1512E" | wc -l)"
+		ANSE="$(grep -E "$BackupDate" "$LogFile" | grep -E -o "ANS[0-9]{4}E" | grep -E -v "ANS1512E" | wc -l)"
 		echo
 		echo "The following ${ANSE// /} errors were encountered:"
 		printf "${ESC}${BoldFace}m%4s%-9s%-30s${Reset}\n" "#" " Error" " Explanation"
 		# Get the list of errors:
-		ErrorList="$(${EGREP} "$BackupDate" "$LogFile" | ${EGREP} -o "ANS[0-9]{4}E" | ${EGREP} -v "ANS1512E" | sort | uniq -c)"
+		ErrorList="$(grep -E "$BackupDate" "$LogFile" | grep -E -o "ANS[0-9]{4}E" | grep -E -v "ANS1512E" | sort | uniq -c)"
 		# Ex: ErrorList='  20 ANS1228E
 	    #   1 ANS1802E
 	    #   2 ANS4005E
@@ -692,15 +643,15 @@ echo "$(date): \"$BackupMessage\"" >> "$DiaryFile"
 ### Create files in $ReportDir for the convenience of the end user
 
 # Create a file with all file from todays backup
-${GREP} "^$Today" "$LogFile" > "$BackedUpFileName"
+grep "^$Today" "$LogFile" > "$BackedUpFileName"
 
 # Create a file with backuped up all files larger that 10 MB in!
-${EGREP} ' Normal File-->' "$BackedUpFileName" | perl -ne 'while(<>) { print "$_" if /(?!\s)(\d+[, ]?)*\d?\d{2}[, ]\d{3}[, ]\d{3}(?=\s)/g }' > "$BigFileName"
+grep -E ' Normal File-->' "$BackedUpFileName" | perl -ne 'while(<>) { print "$_" if /(?!\s)(\d+[, ]?)*\d?\d{2}[, ]\d{3}[, ]\d{3}(?=\s)/g }' > "$BigFileName"
 # But remove bigfiles if file size = 0
 [ -s "$BigFileName" ] || rm -f "$BigFileName" 2> /dev/null
 
 # Create a file that contains the Errors from todays execution
-${GREP} "^$Today" "$BackedUpFileName" | ${EGREP} " ANS[0-9]{4}E " > "$ErrorFileName"
+grep "^$Today" "$BackedUpFileName" | grep -E " ANS[0-9]{4}E " > "$ErrorFileName"
 # But remove error file if size = 0
 [ -s "$ErrorFileName" ] || rm -f "$ErrorFileName" 2> /dev/null
 
@@ -717,18 +668,18 @@ ${GREP} "^$Today" "$BackedUpFileName" | ${EGREP} " ANS[0-9]{4}E " > "$ErrorFileN
 # House keeping: remove old report files
 # Remove Backup reports that are older than 30 days
 if [ -z "${OS/Darwin/}" ]; then
-	${FIND} "$ReportDir" -name 'Backed_up_*' -type f -mtime +30d -exec rm -f {} \;
-	${FIND} "$ReportDir" -name 'Bigfiles_*' -type f -mtime +30d -exec rm -f {} \;
-	${FIND} "$ReportDir" -name 'Errors_*' -type f -mtime +30d -exec rm -f {} \;
+	find "$ReportDir" -name 'Backed_up_*' -type f -mtime +30d -exec rm -f {} \;
+	find "$ReportDir" -name 'Bigfiles_*' -type f -mtime +30d -exec rm -f {} \;
+	find "$ReportDir" -name 'Errors_*' -type f -mtime +30d -exec rm -f {} \;
 else
-	${FIND} "$ReportDir" -name 'Backed_up_*' -type f -mtime 30 -exec rm -f {} \;
-	${FIND} "$ReportDir" -name 'Bigfiles_*' -type f -mtime 30 -exec rm -f {} \;
-	${FIND} "$ReportDir" -name 'Errors_*' -type f -mtime 30 -exec rm -f {} \;
+	find "$ReportDir" -name 'Backed_up_*' -type f -mtime 30 -exec rm -f {} \;
+	find "$ReportDir" -name 'Bigfiles_*' -type f -mtime 30 -exec rm -f {} \;
+	find "$ReportDir" -name 'Errors_*' -type f -mtime 30 -exec rm -f {} \;
 fi
 
 # Remove the old signal file and create a new one
 rm -f "/tmp/TSM_user_notified_${ClientName}_201[0-9]-[0-9-]*" 2>/dev/null
-${TOUCH} "/tmp/TSM_user_notified_${ClientName}_${Today}"
+touch "/tmp/TSM_user_notified_${ClientName}_${Today}"
 
 [ "$Debug" = "t" ] && echo "$(date): (end of script)" >> "$DebugFile"
 exit 0
