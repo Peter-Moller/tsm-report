@@ -372,7 +372,7 @@ function GetBackupResult ()
 	BackupNrVolume="$(echo "$BackupData" | grep 'Total number of bytes transferred' | awk '{ print $8" "$9 }')"
 	BackupDuration="$(echo "$BackupData" | grep 'Elapsed processing time' | awk '{ print $6 }')"
 	# What TSM-server are we running against?
-	BackupServer="$(echo "$BackupData" | grep "Session established with server" | awk '{print $7}' | cut -d: -f1 | head -1)"
+	BackupServer="$(echo "$BackupData" | grep "Session established with server" | awk '{print $7}' | cut -d: -f1 | tail -1)"
 
 	# Look for >5 of the infamous ANS1029E/ANS1017E messages and create warning message accordingly
 	# However, ignore error messages during the night (when there is no scheduler) from houres 01, 02, 03, 04, 05, 06.
