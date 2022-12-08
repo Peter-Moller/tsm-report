@@ -88,7 +88,11 @@ if [ -z "${OS/Windows/}" ]; then
 	ReportDir="/TSM/DailyReports"
 elif [ -z "${OS/Darwin/}" ]; then
 	TSMDirName="/Library/Application Support/tivoli/tsm/client/ba/bin"
-	Dsm_Opt="/Library/Preferences/Tivoli Storage Manager/dsm.opt"
+	if [ -f "/Library/Preferences/Tivoli Storage Manager/dsm.opt" ]; then
+		Dsm_Opt="/Library/Preferences/Tivoli Storage Manager/dsm.opt"
+	elif [ -f "/Library/Application\ Support/tivoli/tsm/client/ba/bin/dsm.opt" ]; then
+		Dsm_Opt="${TSMDirName}/dsm.opt"
+	fi
 	Dsm_Sys="${TSMDirName}/dsm.sys"
 	LogFile="/Library/Logs/tivoli/tsm/dsmsched.log"
 	ClientName="$(grep -i "NodeName" "$Dsm_Sys" | awk '{print $2}')"
